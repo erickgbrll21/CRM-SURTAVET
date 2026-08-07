@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Media CRM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="social_media_crm.css">
+</head>
+<body>
+
+<!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h1>ðŸ“Š Social CRM</h1>
+    <p>GestÃ£o de Leads & Clientes</p>
+  </div>
+  <div class="sidebar-nav" id="sidebar-nav">
+    <div class="nav-item active" onclick="navigate('dashboard')"><span class="icon">ðŸ </span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="navigate('leads')"><span class="icon">ðŸ‘¥</span><span>Leads</span></div>
+    <div class="nav-item" onclick="navigate('pipeline')"><span class="icon">ðŸ“‹</span><span>Pipeline</span></div>
+    <div class="nav-item" onclick="navigate('clients')"><span class="icon">ðŸ†</span><span>Clientes</span></div>
+    <div class="nav-item" onclick="navigate('tasks')"><span class="icon">âœ…</span><span>Tarefas</span></div>
+    <div class="nav-item" onclick="navigate('import')"><span class="icon">ðŸ“¥</span><span>Importar Leads</span></div>
+    <div class="nav-item" onclick="navigate('reports')"><span class="icon">ðŸ“Š</span><span>RelatÃ³rios</span></div>
+    <div class="nav-item" onclick="navigate('backup')"><span class="icon">ðŸ”’</span><span>Backup</span></div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <span style="font-size:22px">ðŸ‘¤</span>
+      <div>
+        <div style="font-weight:700;color:#fff;font-size:13px;">Social Media</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.35);">Manager</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MAIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-actions">
+      <span id="save-indicator" style="font-size:12px;color:#94A3B8;display:flex;align-items:center;gap:4px"></span>
+      <button class="btn btn-secondary btn-sm" onclick="enviarParaClaude()" title="Baixa crm_data.json â€” manda para o Claude no chat para sincronizar com Firefox" style="background:#7C3AED;color:#fff;border-color:#7C3AED;font-weight:700">â¬† Sincronizar</button>
+      <button class="btn btn-secondary btn-sm" onclick="gerarParaFirefox()" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">ðŸ¦Š Abrir no Firefox</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restore-file').click()" title="Restaurar backup">ðŸ“‚ Restaurar</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreJSON(event)">
+      <button class="btn btn-secondary" onclick="exportCSV()">â¬‡ Exportar CSV</button>
+      <button class="btn btn-primary" onclick="openLeadModal(null)">+ Novo Lead</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal" id="the-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo Lead</div>
+      <button class="modal-close" onclick="closeModal()">âœ•</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="toast-container" id="toasts"></div>
+
+<script src="social_media_crm.js"></script>
+</body>
+</html>
+
