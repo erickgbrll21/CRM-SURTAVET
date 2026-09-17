@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Surta</title>
+<link rel="icon" type="image/png" href="assets/logo-surta.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="index.css">
+</head>
+<body class="auth-open">
+
+<!-- ────────────── LOGIN ────────────── -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card" id="auth-card">
+    <div class="auth-logo">
+      <img src="assets/logo-surta.png" alt="Surta">
+    </div>
+    <h1>CRM</h1>
+    <p class="auth-sub" id="auth-sub">Carregando sessão…</p>
+    <p class="auth-admin-note hidden" id="auth-admin-note">A conta só é criada por um administrador. Solicite o acesso à equipe responsável.</p>
+    <div id="auth-setup" class="auth-setup hidden"></div>
+    <form id="auth-form" class="hidden" onsubmit="submitAuth(event)">
+      <div class="form-group">
+        <label for="auth-email">E-mail</label>
+        <input id="auth-email" type="email" autocomplete="username" required placeholder="voce@empresa.com">
+      </div>
+      <div class="form-group" id="auth-pass-wrap">
+        <label for="auth-password">Senha</label>
+        <input id="auth-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group hidden" id="auth-pass2-wrap">
+        <label for="auth-password2">Confirmar senha</label>
+        <input id="auth-password2" type="password" autocomplete="new-password" minlength="6" placeholder="Repita a senha">
+      </div>
+      <div class="auth-error hidden" id="auth-error"></div>
+      <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">Entrar</button>
+    </form>
+    <div class="auth-links hidden" id="auth-links"></div>
+  </div>
+</div>
+
+<!-- ────────────── SIDEBAR ────────────── -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <img src="assets/logo-surtavet-white.png" alt="Surtavet marketing veterinário">
+  </div>
+  <div class="sidebar-nav" id="sidebar-nav">
+    <div class="nav-item active" onclick="navigate('dashboard')"><span class="icon">🏠</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="navigate('leads')"><span class="icon">👥</span><span>Leads</span></div>
+    <div class="nav-item" onclick="navigate('pipeline')"><span class="icon">📋</span><span>Pipeline</span></div>
+    <div class="nav-item" onclick="navigate('clients')"><span class="icon">🏆</span><span>Clientes</span></div>
+    <div class="nav-item" onclick="navigate('tasks')"><span class="icon">✅</span><span>Tarefas</span></div>
+    <div class="nav-item" onclick="navigate('import')"><span class="icon">📥</span><span>Importar Leads</span></div>
+    <div class="nav-item" onclick="navigate('reports')"><span class="icon">📊</span><span>Relatórios</span></div>
+    <div class="nav-item" onclick="navigate('backup')"><span class="icon">🔒</span><span>Backup</span></div>
+    <div class="nav-item hidden" id="nav-users" onclick="navigate('users')"><span class="icon">🛡️</span><span>Usuários</span></div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <span style="font-size:22px">👤</span>
+      <div style="min-width:0;flex:1">
+        <div id="user-name">Social Media</div>
+        <div id="user-email">Manager</div>
+        <div id="user-role" class="sidebar-role hidden"></div>
+      </div>
+    </div>
+    <button class="btn btn-sm sidebar-logout" onclick="logout()" id="btn-logout">Sair</button>
+  </div>
+</nav>
+
+<!-- ────────────── MAIN ────────────── -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-actions">
+      <span id="save-indicator" style="font-size:12px;color:#94A3B8;display:flex;align-items:center;gap:4px"></span>
+      <button class="btn btn-primary btn-sm" onclick="enviarParaClaude()" title="Baixa crm_data.json — manda para o Claude no chat para sincronizar com Firefox" style="font-weight:700">⬆ Sincronizar</button>
+      <button class="btn btn-secondary btn-sm" onclick="gerarParaFirefox()" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">🦊 Abrir no Firefox</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restore-file').click()" title="Restaurar backup">📂 Restaurar</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreJSON(event)">
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-primary" onclick="openLeadModal(null)">+ Novo Lead</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<!-- ────────────── MODAL ────────────── -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal" id="the-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo Lead</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ────────────── TOAST ────────────── -->
+<div class="toast-container" id="toasts"></div>
+
+<script src="config.js"></script>
+<script src="index.js"></script>
+</body>
+</html>
+
+
