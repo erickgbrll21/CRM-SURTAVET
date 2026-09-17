@@ -77,6 +77,98 @@ function toast(msg, type='') {
   setTimeout(()=>el.remove(), 2800);
 }
 
+const STAGE_IDS = new Set(STAGES.map(s => s.id));
+const QUALITY_IDS = new Set(['A','B','C','D']);
+const PRIORITY_IDS = new Set(['high','medium','low']);
+const MIN_PASSWORD = 12;
+const MAX_LEN = { name:200, instagram:100, phone:40, company:200, niche:100, source:120, serviceType:120, nextAction:300, objections:500, notes:5000, title:200, hist:1000, id:64 };
+
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escAttr(s) { return escHtml(s); }
+function clip(s, n) { return String(s ?? '').slice(0, n); }
+function isIsoDate(s) { return !s || /^\d{4}-\d{2}-\d{2}$/.test(String(s)); }
+function isValidEmail(s) {
+  const v = String(s || '').trim();
+  return v.length > 3 && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+function safeId(s) {
+  const id = clip(s, MAX_LEN.id).replace(/[^\w-]/g, '');
+  return id || uid();
+}
+function waHref(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 15) return '';
+  const full = digits.startsWith('55') ? digits : '55' + digits;
+  return 'https://wa.me/' + full;
+}
+function sanitizeHistory(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, 200).map(h => ({
+    date: isIsoDate(h?.date) ? String(h.date) : '',
+    text: clip(h?.text, MAX_LEN.hist)
+  }));
+}
+function sanitizeLead(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const quality = String(raw.quality || 'C').toUpperCase();
+  const created = String(raw.createdAt || '').slice(0, 10);
+  return {
+    id: safeId(raw.id || uid()),
+    name: clip(raw.name, MAX_LEN.name),
+    instagram: clip(raw.instagram, MAX_LEN.instagram),
+    phone: clip(raw.phone, MAX_LEN.phone),
+    company: clip(raw.company, MAX_LEN.company),
+    niche: clip(raw.niche, MAX_LEN.niche),
+    source: clip(raw.source, MAX_LEN.source),
+    stage: STAGE_IDS.has(raw.stage) ? raw.stage : 'new',
+    serviceType: clip(raw.serviceType, MAX_LEN.serviceType),
+    quality: QUALITY_IDS.has(quality) ? quality : 'C',
+    firstContactDate: isIsoDate(raw.firstContactDate) ? raw.firstContactDate : '',
+    meetingDate: isIsoDate(raw.meetingDate) ? raw.meetingDate : '',
+    proposalDate: isIsoDate(raw.proposalDate) ? raw.proposalDate : '',
+    responded: !!raw.responded,
+    respondedAfterProposal: !!raw.respondedAfterProposal,
+    sold: !!raw.sold,
+    contractValue: Math.max(0, Number(raw.contractValue) || 0),
+    nextAction: clip(raw.nextAction, MAX_LEN.nextAction),
+    objections: clip(raw.objections, MAX_LEN.objections),
+    notes: clip(raw.notes, MAX_LEN.notes),
+    history: sanitizeHistory(raw.history),
+    createdAt: isIsoDate(created) ? created : new Date().toISOString().slice(0, 10)
+  };
+}
+function sanitizeTask(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const title = clip(raw.title, MAX_LEN.title);
+  if (!title) return null;
+  return {
+    id: safeId(raw.id || uid()),
+    leadId: raw.leadId ? safeId(raw.leadId) : '',
+    title,
+    dueDate: isIsoDate(raw.dueDate) ? raw.dueDate : '',
+    priority: PRIORITY_IDS.has(raw.priority) ? raw.priority : 'medium',
+    done: !!raw.done,
+    createdAt: clip(raw.createdAt || new Date().toISOString(), 40)
+  };
+}
+function histEl(text, dateLabel) {
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  const dot = document.createElement('div');
+  dot.className = 'history-dot';
+  const content = document.createElement('div');
+  content.className = 'history-content';
+  const body = document.createElement('div');
+  body.textContent = text;
+  const date = document.createElement('div');
+  date.className = 'history-date';
+  date.textContent = dateLabel;
+  content.append(body, date);
+  item.append(dot, content);
+  return item;
+}
 // ═══════════════════════════════════════════════════
 //  SUPABASE / AUTH
 // ═══════════════════════════════════════════════════
@@ -188,7 +280,7 @@ function toDbLead(l) {
   };
 }
 function fromDbLead(r) {
-  return {
+  return sanitizeLead({
     id: r.id,
     name: r.name || '',
     instagram: r.instagram || '',
@@ -211,7 +303,7 @@ function fromDbLead(r) {
     notes: r.notes || '',
     history: Array.isArray(r.history) ? r.history : [],
     createdAt: r.created_at || ''
-  };
+  });
 }
 function toDbTask(t) {
   return {
@@ -226,7 +318,7 @@ function toDbTask(t) {
   };
 }
 function fromDbTask(r) {
-  return {
+  return sanitizeTask({
     id: r.id,
     leadId: r.lead_id || '',
     title: r.title || '',
@@ -234,7 +326,7 @@ function fromDbTask(r) {
     priority: r.priority || 'medium',
     done: !!r.done,
     createdAt: r.created_at || ''
-  };
+  });
 }
 
 function setAuthError(msg) {
@@ -283,25 +375,25 @@ function showAuth(mode) {
   showAuthAdminNote(false);
 
   if (authMode === 'bootstrap') {
-    sub.textContent = 'Crie o primeiro administrador do sistema';
-    pass2.classList.remove('hidden');
-    document.getElementById('auth-password2').required = true;
-    document.getElementById('auth-password').autocomplete = 'new-password';
-    submit.textContent = 'Criar administrador';
-    links.innerHTML = `Já tem conta? <button type="button" onclick="showAuth('login')">Entrar</button>`;
+    form.classList.add('hidden');
+    document.getElementById('auth-email').required = false;
+    document.getElementById('auth-password').required = false;
+    sub.textContent = 'Nenhuma conta ainda';
+    links.innerHTML = `<button type="button" data-action="show-auth" data-mode="login">Já tenho conta</button>`;
+    setAuthError('Crie o primeiro administrador em Authentication → Users no painel do Supabase. A primeira conta recebe papel de admin automaticamente.');
   } else if (authMode === 'signup') {
     sub.textContent = 'Crie sua conta para salvar os dados na nuvem';
     pass2.classList.remove('hidden');
     document.getElementById('auth-password2').required = true;
     document.getElementById('auth-password').autocomplete = 'new-password';
     submit.textContent = 'Criar conta';
-    links.innerHTML = `Já tem conta? <button type="button" onclick="showAuth('login')">Entrar</button>`;
+    links.innerHTML = `Já tem conta? <button type="button" data-action="show-auth" data-mode="login">Entrar</button>`;
   } else if (authMode === 'reset') {
     sub.textContent = 'Enviaremos um link para redefinir a senha';
     passWrap.classList.add('hidden');
     document.getElementById('auth-password').required = false;
     submit.textContent = 'Enviar link';
-    links.innerHTML = `<button type="button" onclick="showAuth('login')">Voltar ao login</button>`;
+    links.innerHTML = `<button type="button" data-action="show-auth" data-mode="login">Voltar ao login</button>`;
   } else if (authMode === 'recovery') {
     sub.textContent = 'Defina uma nova senha para sua conta';
     pass2.classList.remove('hidden');
@@ -318,9 +410,9 @@ function showAuth(mode) {
     submit.textContent = 'Entrar';
     showAuthAdminNote(true);
     const signup = signupAllowed()
-      ? `Não tem conta? <button type="button" onclick="showAuth('signup')">Criar conta</button> · `
+      ? `Não tem conta? <button type="button" data-action="show-auth" data-mode="signup">Criar conta</button> · `
       : '';
-    links.innerHTML = `${signup}<button type="button" onclick="showAuth('reset')">Esqueci a senha</button>`;
+    links.innerHTML = `${signup}<button type="button" data-action="show-auth" data-mode="reset">Esqueci a senha</button>`;
   }
 }
 
@@ -337,7 +429,7 @@ function showSetup() {
   showAuthAdminNote(false);
   sub.textContent = 'Conecte o projeto Supabase para ativar login e banco';
   const fallback = cfg().allowLocalFallback !== false
-    ? `<button class="btn btn-secondary" onclick="startLocalMode()">Continuar só neste navegador</button>`
+    ? `<button class="btn btn-secondary" type="button" data-action="start-local">Continuar só neste navegador</button>`
     : '';
   setup.innerHTML = `
     <ol>
@@ -364,6 +456,7 @@ async function submitAuth(e) {
   submit.textContent = 'Aguarde…';
   try {
     if (authMode === 'reset') {
+      if (!isValidEmail(email)) throw new Error('E-mail inválido.');
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
       if (error) throw error;
       setAuthError('');
@@ -371,24 +464,19 @@ async function submitAuth(e) {
       return;
     }
     if (authMode === 'recovery') {
+      if (password.length < MIN_PASSWORD) throw new Error('A senha precisa ter pelo menos 12 caracteres.');
       if (password !== password2) throw new Error('As senhas não coincidem.');
       const { error } = await sb.auth.updateUser({ password });
       if (error) throw error;
       toast('Senha atualizada!', 'success');
       return;
     }
-    if (authMode === 'bootstrap') {
-      if (password !== password2) throw new Error('As senhas não coincidem.');
-      await callAdminFn({ email, password, role: 'admin' }, false);
-      toast('Administrador criado. Entre com esses dados.', 'success');
-      showAuth('login');
-      document.getElementById('auth-email').value = email;
-      return;
-    }
     if (authMode === 'signup') {
       if (!signupAllowed()) {
         throw new Error('A conta só é criada por um administrador.');
       }
+      if (!isValidEmail(email)) throw new Error('E-mail inválido.');
+      if (password.length < MIN_PASSWORD) throw new Error('A senha precisa ter pelo menos 12 caracteres.');
       if (password !== password2) throw new Error('As senhas não coincidem.');
       const { data, error } = await sb.auth.signUp({ email, password });
       if (error) throw error;
@@ -400,6 +488,8 @@ async function submitAuth(e) {
       }
       return;
     }
+    if (!isValidEmail(email)) throw new Error('E-mail inválido.');
+    if (!password) throw new Error('Informe a senha.');
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
   } catch (err) {
@@ -419,7 +509,7 @@ function translateAuthError(msg) {
     return 'A conta só é criada por um administrador.';
   }
   if (m.includes('administrador')) return msg;
-  if (m.includes('password')) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (m.includes('password') || m.includes('12 caracteres')) return 'A senha precisa ter pelo menos 12 caracteres.';
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Aguarde um momento.';
   return msg;
 }
@@ -549,11 +639,11 @@ function saveLocal() {
   localStorage.setItem('scrm_v3', JSON.stringify(payload));
 }
 
-function setSaveIndicator(html, later) {
+function setSaveIndicator(text, later) {
   const ind = document.getElementById('save-indicator');
   if (!ind) return;
-  ind.innerHTML = html;
-  if (later) setTimeout(()=>{ if (ind.innerHTML === html) ind.innerHTML = later; }, 3000);
+  ind.textContent = text || '';
+  if (later) setTimeout(()=>{ if (ind.textContent === text) ind.textContent = later; }, 3000);
 }
 
 function save() {
@@ -625,16 +715,16 @@ async function flushCloudSave() {
 
 function loadLocal() {
   if (window.__CRM_DATA__ && Array.isArray(window.__CRM_DATA__.leads)) {
-    S.leads = window.__CRM_DATA__.leads;
-    S.tasks  = window.__CRM_DATA__.tasks || [];
+    S.leads = window.__CRM_DATA__.leads.map(sanitizeLead).filter(Boolean);
+    S.tasks  = (window.__CRM_DATA__.tasks || []).map(sanitizeTask).filter(Boolean);
     saveLocal();
     return;
   }
   try {
     const d = JSON.parse(localStorage.getItem('scrm_v3') || 'null');
     if (d && d.leads) {
-      S.leads = d.leads;
-      S.tasks = d.tasks || [];
+      S.leads = d.leads.map(sanitizeLead).filter(Boolean);
+      S.tasks = (d.tasks || []).map(sanitizeTask).filter(Boolean);
     } else {
       S.leads = [];
       S.tasks = [];
@@ -668,8 +758,8 @@ async function loadFromCloud() {
     loadLocal();
     return;
   }
-  S.leads = (leadsRes.data || []).map(fromDbLead);
-  S.tasks = (tasksRes.data || []).map(fromDbTask);
+  S.leads = (leadsRes.data || []).map(fromDbLead).filter(Boolean);
+  S.tasks = (tasksRes.data || []).map(fromDbTask).filter(Boolean);
   saveLocal();
 
   if (!S.leads.length && !S.tasks.length && hasLocalData()) {
@@ -710,8 +800,24 @@ function navigate(v) {
   S.view = v;
   document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', VIEWS[i]===v));
   document.getElementById('page-title').textContent = TITLES[v] || '';
+  closeMenu();
   render();
 }
+
+function isDrawerNav() {
+  return window.matchMedia('(max-width: 1024px)').matches;
+}
+function setMenuOpen(open) {
+  if (!isDrawerNav()) open = false;
+  document.body.classList.toggle('menu-open', open);
+  const btn = document.getElementById('menu-btn');
+  if (btn) {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+  }
+}
+function closeMenu() { setMenuOpen(false); }
+function toggleMenu() { setMenuOpen(!document.body.classList.contains('menu-open')); }
 
 let _chartTimer = null;
 function render() {
@@ -755,7 +861,7 @@ function vDashboard() {
     <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" style="color:#3B82F6">${pending}</div><div class="stat-label">Tarefas Pendentes</div></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px">
+  <div class="split-2">
     <div class="card">
       <div style="font-weight:700;margin-bottom:14px;font-size:14px">📊 Pipeline por Estágio</div>
       ${STAGES.map(s=>{
@@ -771,13 +877,13 @@ function vDashboard() {
       <div style="font-weight:700;margin-bottom:14px;font-size:14px">🕐 Leads Recentes</div>
       ${recent.map(l=>{
         const sg = stage(l.stage);
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9;cursor:pointer" onclick="openLeadModal('${l.id}')">
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9;cursor:pointer" data-action="open-lead" data-id="${escAttr(l.id)}">
           <div style="width:32px;height:32px;border-radius:50%;background:${sg.color}22;display:flex;align-items:center;justify-content:center;font-size:16px">${sg.icon}</div>
-          <div style="flex:1"><div style="font-weight:600;font-size:13px">${l.name}</div><div style="font-size:11px;color:#009eff">${l.instagram||''}</div></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtml(l.name)}</div><div style="font-size:11px;color:#009eff">${escHtml(l.instagram||'')}</div></div>
           <span class="badge ${QC[l.quality]||'badge-D'}">${l.quality||'?'}</span>
         </div>`;
       }).join('')||'<div class="text-muted" style="padding:16px 0;text-align:center">Nenhum lead ainda</div>'}
-      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="openLeadModal(null)">+ Adicionar Lead</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" type="button" data-action="open-lead">+ Adicionar Lead</button>
     </div>
   </div>
 
@@ -799,7 +905,7 @@ function vDashboard() {
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F1F5F9">
         <div style="width:10px;height:10px;border-radius:50%;background:${colors[i%colors.length]};flex-shrink:0"></div>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13.5px">${k}</div>
+          <div style="font-weight:700;font-size:13.5px">${escHtml(k)}</div>
           <div style="font-size:11.5px;color:#64748B">${v.count} cliente${v.count!==1?'s':''}</div>
         </div>
         <div style="font-weight:700;color:#10B981;font-size:13px">R$ ${v.revenue.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}/mês</div>
@@ -809,11 +915,11 @@ function vDashboard() {
 
   <div class="card">
     <div style="font-weight:700;margin-bottom:14px;font-size:14px">⚡ Ações Rápidas</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-      <div class="quick-action" onclick="openLeadModal(null)"><span style="font-size:22px">âž•</span><div><div style="font-weight:700;font-size:12.5px">Novo Lead</div><div style="font-size:11px;color:#94A3B8">Adicionar</div></div></div>
-      <div class="quick-action" onclick="navigate('import')"><span style="font-size:22px">📥</span><div><div style="font-weight:700;font-size:12.5px">Importar CSV</div><div style="font-size:11px;color:#94A3B8">Da planilha</div></div></div>
-      <div class="quick-action" onclick="navigate('pipeline')"><span style="font-size:22px">📋</span><div><div style="font-weight:700;font-size:12.5px">Pipeline</div><div style="font-size:11px;color:#94A3B8">Kanban visual</div></div></div>
-      <div class="quick-action" onclick="navigate('reports')"><span style="font-size:22px">📊</span><div><div style="font-weight:700;font-size:12.5px">Relatórios</div><div style="font-size:11px;color:#94A3B8">Ver análises</div></div></div>
+    <div class="quick-actions">
+      <div class="quick-action" data-action="open-lead"><span style="font-size:22px">＋</span><div><div style="font-weight:700;font-size:12.5px">Novo Lead</div><div style="font-size:11px;color:#94A3B8">Adicionar</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="import"><span style="font-size:22px">📥</span><div><div style="font-weight:700;font-size:12.5px">Importar CSV</div><div style="font-size:11px;color:#94A3B8">Da planilha</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="pipeline"><span style="font-size:22px">📋</span><div><div style="font-weight:700;font-size:12.5px">Pipeline</div><div style="font-size:11px;color:#94A3B8">Kanban visual</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="reports"><span style="font-size:22px">📊</span><div><div style="font-weight:700;font-size:12.5px">Relatórios</div><div style="font-size:11px;color:#94A3B8">Ver análises</div></div></div>
     </div>
   </div>`;
 }
@@ -840,29 +946,29 @@ function vLeads() {
   const rows = filtered();
   return `
   <div class="search-bar">
-    <input class="search-input" type="text" placeholder="Buscar por nome, @instagram ou empresa…" value="${S.f.q}" oninput="setF('q',this.value)" style="max-width:310px">
-    <select class="filter-select" onchange="setF('stage',this.value)">
+    <input class="search-input" type="text" placeholder="Buscar por nome, @instagram ou empresa…" value="${escAttr(S.f.q)}" data-filter="q">
+    <select class="filter-select" data-filter="stage">
       <option value="">Todos os estágios</option>
       ${STAGES.map(s=>`<option value="${s.id}" ${S.f.stage===s.id?'selected':''}>${s.icon} ${s.name}</option>`).join('')}
     </select>
-    <select class="filter-select" onchange="setF('quality',this.value)">
+    <select class="filter-select" data-filter="quality">
       <option value="">Qualidade</option>
       <option value="A" ${S.f.quality==='A'?'selected':''}>🔥 Hot (A)</option>
       <option value="B" ${S.f.quality==='B'?'selected':''}>😊 Warm (B)</option>
       <option value="C" ${S.f.quality==='C'?'selected':''}>❄️ Cold (C)</option>
       <option value="D" ${S.f.quality==='D'?'selected':''}>🧊 Frozen (D)</option>
     </select>
-    <select class="filter-select" onchange="setF('responded',this.value)">
+    <select class="filter-select" data-filter="responded">
       <option value="">Respondeu?</option>
       <option value="true" ${S.f.responded==='true'?'selected':''}>✅ Sim</option>
       <option value="false" ${S.f.responded==='false'?'selected':''}>❌ Não</option>
     </select>
-    <select class="filter-select" onchange="setF('sold',this.value)">
+    <select class="filter-select" data-filter="sold">
       <option value="">Vendeu?</option>
       <option value="true" ${S.f.sold==='true'?'selected':''}>✅ Sim</option>
       <option value="false" ${S.f.sold==='false'?'selected':''}>❌ Não</option>
     </select>
-    <button class="btn btn-secondary btn-sm" onclick="clearF()">✕ Limpar</button>
+    <button class="btn btn-secondary btn-sm" type="button" data-action="clear-filters">✕ Limpar</button>
     <span class="text-muted" style="white-space:nowrap">${rows.length} lead${rows.length!==1?'s':''}</span>
   </div>
 
@@ -880,12 +986,12 @@ function vLeads() {
         ${rows.length ? rows.map(l=>{
           const sg = stage(l.stage);
           return `<tr>
-            <td><div style="font-weight:700;font-size:13px">${l.name}</div><div style="color:#009eff;font-size:11px">${l.instagram||'—'}</div></td>
-            <td style="font-size:12px;color:#374151;white-space:nowrap">${l.phone ? `<a href="https://wa.me/55${l.phone.replace(/\D/g,'')}" target="_blank" style="color:#10B981;text-decoration:none" title="Abrir WhatsApp">📱 ${l.phone}</a>` : '—'}</td>
-            <td style="font-size:12.5px">${l.company||'—'}</td>
-            <td><span class="tag">${l.niche||'—'}</span></td>
-            <td style="font-size:12px;color:#0369A1;font-weight:600">${l.source||'—'}</td>
-            <td style="font-size:12px;color:#006eb3;font-weight:600">${l.serviceType||'—'}</td>
+            <td><div style="font-weight:700;font-size:13px">${escHtml(l.name)}</div><div style="color:#009eff;font-size:11px">${escHtml(l.instagram||'—')}</div></td>
+            <td style="font-size:12px;color:#374151;white-space:nowrap">${(() => { const wa = waHref(l.phone); return wa ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener noreferrer" style="color:#10B981;text-decoration:none" title="Abrir WhatsApp">📱 ${escHtml(l.phone)}</a>` : '—'; })()}</td>
+            <td style="font-size:12.5px">${escHtml(l.company||'—')}</td>
+            <td><span class="tag">${escHtml(l.niche||'—')}</span></td>
+            <td style="font-size:12px;color:#0369A1;font-weight:600">${escHtml(l.source||'—')}</td>
+            <td style="font-size:12px;color:#006eb3;font-weight:600">${escHtml(l.serviceType||'—')}</td>
             <td><span class="badge" style="background:${sg.color}20;color:${sg.color};font-size:10px">${sg.icon} ${sg.name}</span></td>
             <td><span class="badge ${QC[l.quality]||'badge-D'}">${QL[l.quality]||'—'}</span></td>
             <td style="font-size:12px">${fmt(l.firstContactDate)}</td>
@@ -895,11 +1001,11 @@ function vLeads() {
             <td><span class="badge ${l.respondedAfterProposal?'badge-yes':'badge-no'}">${l.respondedAfterProposal?'✅ Sim':'❌ Não'}</span></td>
             <td><span class="badge ${l.sold?'badge-yes':'badge-no'}">${l.sold?'✅ Sim':'❌ Não'}</span></td>
             <td style="font-size:12px;font-weight:700;color:${l.contractValue?'#10B981':'#94A3B8'}">${fmtR(l.contractValue)}</td>
-            <td style="font-size:11.5px;color:#64748B;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.objections||''}">${l.objections||'—'}</td>
-            <td style="font-size:11.5px;color:#64748B;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.nextAction||''}">${l.nextAction||'—'}</td>
-            <td><div style="display:flex;gap:4px"><button class="action-btn action-edit" onclick="openLeadModal('${l.id}')">✏️</button><button class="action-btn action-delete" onclick="delLead('${l.id}')">🗑</button></div></td>
+            <td style="font-size:11.5px;color:#64748B;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escAttr(l.objections||'')}">${escHtml(l.objections||'—')}</td>
+            <td style="font-size:11.5px;color:#64748B;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escAttr(l.nextAction||'')}">${escHtml(l.nextAction||'—')}</td>
+            <td><div style="display:flex;gap:4px"><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">✏️</button><button class="action-btn action-delete" data-action="delete-lead" data-id="${escAttr(l.id)}">🗑</button></div></td>
           </tr>`;
-        }).join('') : `<tr><td colspan="14"><div class="empty-state"><div class="empty-state-icon">🔍</div><h3>Nenhum lead encontrado</h3><button class="btn btn-primary" style="margin-top:12px" onclick="openLeadModal(null)">+ Novo Lead</button></div></td></tr>`}
+        }).join('') : `<tr><td colspan="14"><div class="empty-state"><div class="empty-state-icon">🔍</div><h3>Nenhum lead encontrado</h3><button class="btn btn-primary" style="margin-top:12px" type="button" data-action="open-lead">+ Novo Lead</button></div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -910,12 +1016,11 @@ function vLeads() {
 //  PIPELINE KANBAN
 // ═══════════════════════════════════════════════════
 function vPipeline() {
-  return `<div style="overflow-x:auto;padding-bottom:20px">
-    <div class="kanban-board" id="kb">
+  return `<div class="kanban-board" id="kb">
       ${STAGES.map(sg=>{
         const leads = S.leads.filter(l=>l.stage===sg.id);
         const val = leads.reduce((s,l)=>s+(+l.contractValue||0),0);
-        return `<div class="kanban-col" data-stage="${sg.id}" ondragover="dOver(event)" ondrop="dDrop(event,'${sg.id}')">
+        return `<div class="kanban-col" data-stage="${sg.id}" data-drop-stage="${escAttr(sg.id)}">
           <div class="kanban-header" style="background:${sg.color}">
             <div class="kanban-header-left">${sg.icon} <span>${sg.name}</span></div>
             <span class="kanban-count">${leads.length}</span>
@@ -927,24 +1032,23 @@ function vPipeline() {
           </div>
         </div>`;
       }).join('')}
-    </div>
   </div>`;
 }
 
 function kcCard(l, sg) {
-  return `<div class="kanban-card" draggable="true" data-id="${l.id}" ondragstart="dStart(event,'${l.id}')" onclick="openLeadModal('${l.id}')" style="border-left-color:${sg.color}">
-    <div class="kc-name">${l.name}</div>
-    <div class="kc-ig">${l.instagram||''}</div>
+  return `<div class="kanban-card" draggable="true" data-action="open-lead" data-id="${escAttr(l.id)}" style="border-left-color:${sg.color}">
+    <div class="kc-name">${escHtml(l.name)}</div>
+    <div class="kc-ig">${escHtml(l.instagram||'')}</div>
     <div class="kc-meta">
       <span class="badge ${QC[l.quality]||'badge-D'}" style="font-size:9.5px">${l.quality||'?'}</span>
       ${l.contractValue?`<span style="font-size:10.5px;color:#10B981;font-weight:700">R$ ${Number(l.contractValue).toLocaleString('pt-BR')}</span>`:''}
     </div>
-    ${l.nextAction?`<div class="kc-next">→ ${l.nextAction}</div>`:''}
+    ${l.nextAction?`<div class="kc-next">→ ${escHtml(l.nextAction)}</div>`:''}
   </div>`;
 }
 
 let dragId = null;
-function dStart(e, id) { dragId=id; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function dStart(e, id) { dragId=id; const card = e.target.closest('.kanban-card') || e.currentTarget; if (card && card.classList) card.classList.add('dragging'); if (e.dataTransfer) e.dataTransfer.effectAllowed='move'; }
 function dOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function dDrop(e, stageId) {
   e.preventDefault(); e.currentTarget.classList.remove('drag-over');
@@ -976,7 +1080,7 @@ function vClients() {
   const rev = cls.reduce((s,l)=>s+(+l.contractValue||0),0);
   const avg = cls.length ? Math.round(rev/cls.length) : 0;
   return `
-  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="stats-grid stats-grid-3">
     <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value" style="color:#10B981">${cls.length}</div><div class="stat-label">Clientes Ativos</div></div>
     <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" style="color:#10B981;font-size:21px">R$ ${rev.toLocaleString('pt-BR')}</div><div class="stat-label">Receita Mensal Total</div></div>
     <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value" style="color:#009eff;font-size:21px">R$ ${avg.toLocaleString('pt-BR')}</div><div class="stat-label">Ticket Médio</div></div>
@@ -986,17 +1090,17 @@ function vClients() {
       <th>Cliente</th><th>Empresa</th><th>Nicho</th><th>🔍 De onde veio</th><th>🛠 Tipo de Serviço</th><th>1º Contato</th><th>Proposta</th><th>Valor/mês</th><th>Qualidade</th><th>Observações</th><th>Ações</th>
     </tr></thead><tbody>
       ${cls.map(l=>`<tr>
-        <td><div style="font-weight:700">${l.name}</div><div style="color:#009eff;font-size:11px">${l.instagram||'—'}</div></td>
-        <td style="font-size:12.5px">${l.company||'—'}</td>
-        <td><span class="tag">${l.niche||'—'}</span></td>
-        <td style="font-size:12px;font-weight:600;color:#0369A1">${l.source||'—'}</td>
-        <td style="font-size:13px;font-weight:700;color:#006eb3">${l.serviceType||'—'}</td>
+        <td><div style="font-weight:700">${escHtml(l.name)}</div><div style="color:#009eff;font-size:11px">${escHtml(l.instagram||'—')}</div></td>
+        <td style="font-size:12.5px">${escHtml(l.company||'—')}</td>
+        <td><span class="tag">${escHtml(l.niche||'—')}</span></td>
+        <td style="font-size:12px;font-weight:600;color:#0369A1">${escHtml(l.source||'—')}</td>
+        <td style="font-size:13px;font-weight:700;color:#006eb3">${escHtml(l.serviceType||'—')}</td>
         <td style="font-size:12px">${fmt(l.firstContactDate)}</td>
         <td style="font-size:12px">${fmt(l.proposalDate)}</td>
         <td style="font-weight:700;color:#10B981">${fmtR(l.contractValue)}</td>
         <td><span class="badge ${QC[l.quality]||'badge-D'}">${QL[l.quality]||'—'}</span></td>
-        <td style="font-size:11.5px;color:#64748B;max-width:180px">${l.notes||'—'}</td>
-        <td><button class="action-btn action-edit" onclick="openLeadModal('${l.id}')">✏️</button></td>
+        <td style="font-size:11.5px;color:#64748B;max-width:180px">${escHtml(l.notes||'—')}</td>
+        <td><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">✏️</button></td>
       </tr>`).join('')}
     </tbody></table></div>` : `<div class="empty-state"><div class="empty-state-icon">🏆</div><h3>Nenhum cliente ainda</h3><p class="text-muted">Leads em "Cliente Fechado" ou "Cliente Antigo" aparecem aqui</p></div>`}
   </div>`;
@@ -1013,20 +1117,20 @@ function vTasks() {
   function tRow(t) {
     const lead = S.leads.find(l=>l.id===t.leadId);
     return `<div class="task-item" style="${t.done?'opacity:.5':''}">
-      <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
+      <div class="task-check ${t.done?'done':''}" data-action="toggle-task" data-id="${escAttr(t.id)}">${t.done?'✓':''}</div>
       <div style="flex:1">
-        <div style="font-weight:600;font-size:13.5px;${t.done?'text-decoration:line-through':''}">${t.title}</div>
-        ${lead?`<div style="font-size:11.5px;color:#009eff">👤 ${lead.name} (${lead.instagram||''})</div>`:''}
+        <div style="font-weight:600;font-size:13.5px;${t.done?'text-decoration:line-through':''}">${escHtml(t.title)}</div>
+        ${lead?`<div style="font-size:11.5px;color:#009eff">👤 ${escHtml(lead.name)} (${escHtml(lead.instagram||'')})</div>`:''}
         ${t.dueDate?`<div style="font-size:11.5px;color:#64748B">📅 ${fmt(t.dueDate)}</div>`:''}
       </div>
       <span style="font-size:10.5px;font-weight:700;color:${PC[t.priority]};background:${PC[t.priority]}18;padding:2px 8px;border-radius:20px">${PL[t.priority]||'Normal'}</span>
-      <button class="action-btn action-delete" onclick="delTask('${t.id}')" style="margin-left:6px">🗑</button>
+      <button class="action-btn action-delete" data-action="delete-task" data-id="${escAttr(t.id)}" style="margin-left:6px">🗑</button>
     </div>`;
   }
   return `
   <div class="section-header">
     <div><div style="font-weight:700;font-size:15px">Tarefas de Follow-up</div><div class="text-muted">${pend.length} pendentes</div></div>
-    <button class="btn btn-primary" onclick="openTaskModal()">+ Nova Tarefa</button>
+    <button class="btn btn-primary" type="button" data-action="open-task">+ Nova Tarefa</button>
   </div>
   <div class="card" style="margin-bottom:16px;padding:0">
     <div style="padding:14px 16px;font-weight:700;border-bottom:1px solid #F1F5F9">📋 Pendentes (${pend.length})</div>
@@ -1049,22 +1153,22 @@ let pending = [];
 
 function vImport() {
   return `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="split-2">
     <div>
       <div class="card">
         <div style="font-weight:700;font-size:15px;margin-bottom:6px">📥 Importar via CSV</div>
         <div class="text-muted" style="margin-bottom:18px;font-size:13px">Faça upload de uma planilha CSV com seus leads</div>
-        <div class="import-zone" id="import-zone" onclick="document.getElementById('csv-file').click()">
+        <div class="import-zone" id="import-zone" data-action="pick-csv">
           <div style="font-size:36px;margin-bottom:10px">📄</div>
           <div style="font-weight:600;margin-bottom:3px">Clique ou arraste o arquivo aqui</div>
           <div class="text-muted" style="font-size:12.5px">Aceita .CSV e .XLSX</div>
         </div>
-        <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleFile(event)">
+        <input type="file" id="csv-file" accept=".csv" style="display:none" >
         <div style="margin-top:16px;padding:12px;background:#F8FAFC;border-radius:8px">
           <div style="font-weight:600;font-size:12px;margin-bottom:6px">📋 Colunas do CSV:</div>
           <code style="font-size:11px;color:#64748B;line-height:1.9">nome, instagram, empresa, nicho, estagio, qualidade,<br>primeiro_contato, reuniao, proposta, respondeu,<br>vendeu, valor, proxima_acao, objecao, observacoes</code>
         </div>
-        <button class="btn btn-secondary" style="margin-top:10px;width:100%" onclick="dlTemplate()">⬇ Baixar Template CSV</button>
+        <button class="btn btn-secondary" style="margin-top:10px;width:100%" type="button" data-action="download-template">⬇ Baixar Template CSV</button>
       </div>
     </div>
     <div>
@@ -1094,9 +1198,9 @@ function vImport() {
   <div class="card" id="import-preview" style="display:none;margin-top:18px">
     <div style="font-weight:700;margin-bottom:14px">👀 Preview da Importação</div>
     <div id="preview-body"></div>
-    <div style="margin-top:14px;display:flex;gap:8px">
-      <button class="btn btn-primary" onclick="confirmImport()">✅ Confirmar Importação</button>
-      <button class="btn btn-secondary" onclick="cancelImport()">✕ Cancelar</button>
+    <div class="preview-actions">
+      <button class="btn btn-primary" type="button" data-action="confirm-import">✅ Confirmar Importação</button>
+      <button class="btn btn-secondary" type="button" data-action="cancel-import">✕ Cancelar</button>
     </div>
   </div>`;
 }
@@ -1179,9 +1283,9 @@ function showPreview(){
       <th style="text-align:left;padding:8px 12px;background:#F8FAFC">Qualidade</th>
     </tr></thead><tbody>
     ${pending.slice(0,15).map(l=>`<tr>
-      <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${l.name}</td>
-      <td style="padding:7px 12px;border-top:1px solid #F1F5F9;color:#009eff">${l.instagram}</td>
-      <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${l.company}</td>
+      <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${escHtml(l.name)}</td>
+      <td style="padding:7px 12px;border-top:1px solid #F1F5F9;color:#009eff">${escHtml(l.instagram)}</td>
+      <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${escHtml(l.company)}</td>
       <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${stage(l.stage).name}</td>
       <td style="padding:7px 12px;border-top:1px solid #F1F5F9">${l.quality}</td>
     </tr>`).join('')}
@@ -1192,7 +1296,7 @@ function showPreview(){
 
 function confirmImport(){
   const n = pending.length;
-  S.leads.push(...pending);
+  S.leads.push(...pending.map(sanitizeLead).filter(l => l && l.name));
   pending=[];
   save();
   toast(`${n} leads importados com sucesso!`, 'success');
@@ -1271,35 +1375,35 @@ function initCharts(){
 //  LEAD MODAL
 // ═══════════════════════════════════════════════════
 function openLeadModal(id){
-  S.editId = id;
+  S.editId = id || null;
   const l = id ? S.leads.find(x=>x.id===id) : null;
-  document.getElementById('modal-title').textContent = l ? `Editar — ${l.name}` : 'Novo Lead';
+  document.getElementById('modal-title').textContent = l ? 'Editar — ' + l.name : 'Novo Lead';
 
-  const stageOpts = STAGES.map(s=>`<option value="${s.id}" ${(l?.stage||'new')===s.id?'selected':''}>${s.icon} ${s.name}</option>`).join('');
+  const stageOpts = STAGES.map(s=>`<option value="${escAttr(s.id)}">${s.icon} ${escHtml(s.name)}</option>`).join('');
 
   document.getElementById('modal-body').innerHTML = `
   <div class="form-section">
     <div class="form-section-title">Informações Básicas</div>
     <div class="form-grid">
-      <div class="form-group"><label>Nome Completo *</label><input id="l-name" type="text" value="${l?.name||''}" placeholder="Ex: Maria Silva"></div>
-      <div class="form-group"><label>@Instagram</label><input id="l-ig" type="text" value="${l?.instagram||''}" placeholder="@usuario"></div>
-      <div class="form-group"><label>📱 Telefone / WhatsApp</label><input id="l-phone" type="text" value="${l?.phone||''}" placeholder="(11) 99999-9999"></div>
-      <div class="form-group"><label>Empresa / Marca</label><input id="l-co" type="text" value="${l?.company||''}" placeholder="Nome da empresa"></div>
-      <div class="form-group"><label>Nicho</label><input id="l-ni" type="text" value="${l?.niche||''}" placeholder="Ex: Moda, Fitness, Food…"></div>
-      <div class="form-group"><label>🔍 De onde veio?</label><input id="l-src" type="text" value="${l?.source||''}" placeholder="Ex: Instagram, Indicação, Stories, Ads…"></div>
+      <div class="form-group"><label>Nome Completo *</label><input id="l-name" type="text" maxlength="200" placeholder="Ex: Maria Silva"></div>
+      <div class="form-group"><label>@Instagram</label><input id="l-ig" type="text" maxlength="100" placeholder="@usuario"></div>
+      <div class="form-group"><label>Telefone / WhatsApp</label><input id="l-phone" type="text" maxlength="40" placeholder="(11) 99999-9999"></div>
+      <div class="form-group"><label>Empresa / Marca</label><input id="l-co" type="text" maxlength="200" placeholder="Nome da empresa"></div>
+      <div class="form-group"><label>Nicho</label><input id="l-ni" type="text" maxlength="100" placeholder="Ex: Moda, Fitness, Food"></div>
+      <div class="form-group"><label>De onde veio?</label><input id="l-src" type="text" maxlength="120" placeholder="Ex: Instagram, Indicação, Stories, Ads"></div>
     </div>
   </div>
   <div class="form-section">
     <div class="form-section-title">Pipeline & Qualidade</div>
     <div class="form-grid">
       <div class="form-group"><label>Estágio do Pipeline</label><select id="l-stage">${stageOpts}</select></div>
-      <div class="form-group"><label>🛠 Tipo de Serviço</label><input id="l-svc" type="text" value="${l?.serviceType||''}" placeholder="Ex: Gestão Social Media, Consultoria…"></div>
+      <div class="form-group"><label>Tipo de Serviço</label><input id="l-svc" type="text" maxlength="120" placeholder="Ex: Gestão Social Media"></div>
       <div class="form-group"><label>Qualidade do Lead</label>
         <select id="l-q">
-          <option value="A" ${l?.quality==='A'?'selected':''}>🔥 Hot (A) — Muito interessado</option>
-          <option value="B" ${(l?.quality==='B'||!l?.quality)?'selected':''}>😊 Warm (B) — Interessado</option>
-          <option value="C" ${l?.quality==='C'?'selected':''}>❄️ Cold (C) — Pouco interesse</option>
-          <option value="D" ${l?.quality==='D'?'selected':''}>🧊 Frozen (D) — Sem interesse</option>
+          <option value="A">Hot (A) — Muito interessado</option>
+          <option value="B">Warm (B) — Interessado</option>
+          <option value="C">Cold (C) — Pouco interesse</option>
+          <option value="D">Frozen (D) — Sem interesse</option>
         </select>
       </div>
     </div>
@@ -1307,9 +1411,9 @@ function openLeadModal(id){
   <div class="form-section">
     <div class="form-section-title">Datas</div>
     <div class="form-grid form-grid-3">
-      <div class="form-group"><label>📅 1º Contato</label><input id="l-d1" type="date" value="${l?.firstContactDate||''}"></div>
-      <div class="form-group"><label>📅 Reunião</label><input id="l-dm" type="date" value="${l?.meetingDate||''}"></div>
-      <div class="form-group"><label>📅 Proposta Enviada</label><input id="l-dp" type="date" value="${l?.proposalDate||''}"></div>
+      <div class="form-group"><label>1º Contato</label><input id="l-d1" type="date"></div>
+      <div class="form-group"><label>Reunião</label><input id="l-dm" type="date"></div>
+      <div class="form-group"><label>Proposta Enviada</label><input id="l-dp" type="date"></div>
     </div>
   </div>
   <div class="form-section">
@@ -1317,50 +1421,85 @@ function openLeadModal(id){
     <div class="form-grid">
       <div class="form-group"><label>Respondeu?</label>
         <div style="display:flex;gap:14px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="resp" value="1" ${l?.responded?'checked':''} style="accent-color:#009eff"> Sim</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="resp" value="0" ${!l?.responded?'checked':''} style="accent-color:#009eff"> Não</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="resp" value="1"> Sim</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="resp" value="0"> Não</label>
         </div>
       </div>
       <div class="form-group"><label>Vendeu?</label>
         <div style="display:flex;gap:14px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="sold" value="1" ${l?.sold?'checked':''} style="accent-color:#009eff"> Sim</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="sold" value="0" ${!l?.sold?'checked':''} style="accent-color:#009eff"> Não</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="sold" value="1"> Sim</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="sold" value="0"> Não</label>
         </div>
       </div>
       <div class="form-group"><label>Respondeu após a proposta?</label>
         <div style="display:flex;gap:14px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rap" value="1" ${l?.respondedAfterProposal?'checked':''} style="accent-color:#06B6D4"> Sim</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rap" value="0" ${!l?.respondedAfterProposal?'checked':''} style="accent-color:#06B6D4"> Não</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rap" value="1"> Sim</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rap" value="0"> Não</label>
         </div>
       </div>
-      <div class="form-group"><label>💰 Valor do Contrato (R$)</label><input id="l-val" type="text" value="${l?.contractValue ? fmtValInput(l.contractValue) : ''}" placeholder="Ex: 1800 ou 1.800"></div>
-      <div class="form-group"><label>⚡ Próxima Ação</label><input id="l-next" type="text" value="${l?.nextAction||''}" placeholder="Ex: Ligar amanhã às 14h"></div>
+      <div class="form-group"><label>Valor do Contrato (R$)</label><input id="l-val" type="text" placeholder="Ex: 1800 ou 1.800"></div>
+      <div class="form-group"><label>Próxima Ação</label><input id="l-next" type="text" maxlength="300" placeholder="Ex: Ligar amanhã"></div>
     </div>
   </div>
   <div class="form-section">
     <div class="form-section-title">Objeções & Observações</div>
     <div class="form-grid">
-      <div class="form-group"><label>❌ Objeção</label><input id="l-obj" type="text" value="${l?.objections||''}" placeholder="Ex: Acha caro, não tem tempo…"></div>
-      <div class="form-group form-full"><label>📝 Observações</label><textarea id="l-notes" placeholder="Anotações livres sobre o lead…">${l?.notes||''}</textarea></div>
+      <div class="form-group"><label>Objeção</label><input id="l-obj" type="text" maxlength="500"></div>
+      <div class="form-group form-full"><label>Observações</label><textarea id="l-notes" maxlength="5000"></textarea></div>
     </div>
   </div>
   ${l ? `
   <div class="form-section">
-    <div class="form-section-title">📋 Histórico de Contatos</div>
-    <div id="hist-list">
-      ${(l.history||[]).map(h=>`<div class="history-item"><div class="history-dot"></div><div class="history-content"><div>${h.text}</div><div class="history-date">${fmt(h.date)}</div></div></div>`).join('')}
-      ${!(l.history||[]).length?'<div class="text-muted">Nenhum registro ainda</div>':''}
-    </div>
+    <div class="form-section-title">Histórico de Contatos</div>
+    <div id="hist-list"></div>
     <div class="history-add">
-      <input id="hist-input" type="text" placeholder="Registrar novo contato, resposta, interação…">
-      <button class="btn btn-secondary btn-sm" onclick="addHist('${l.id}')">+ Adicionar</button>
+      <input id="hist-input" type="text" maxlength="1000" placeholder="Registrar novo contato">
+      <button type="button" class="btn btn-secondary btn-sm" data-action="add-hist" data-id="${escAttr(l.id)}">+ Adicionar</button>
     </div>
   </div>` : ''}`;
 
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  setVal('l-name', l?.name || '');
+  setVal('l-ig', l?.instagram || '');
+  setVal('l-phone', l?.phone || '');
+  setVal('l-co', l?.company || '');
+  setVal('l-ni', l?.niche || '');
+  setVal('l-src', l?.source || '');
+  setVal('l-stage', l?.stage || 'new');
+  setVal('l-svc', l?.serviceType || '');
+  setVal('l-q', QUALITY_IDS.has(l?.quality) ? l.quality : 'B');
+  setVal('l-d1', l?.firstContactDate || '');
+  setVal('l-dm', l?.meetingDate || '');
+  setVal('l-dp', l?.proposalDate || '');
+  setVal('l-val', l?.contractValue ? fmtValInput(l.contractValue) : '');
+  setVal('l-next', l?.nextAction || '');
+  setVal('l-obj', l?.objections || '');
+  setVal('l-notes', l?.notes || '');
+  const check = (name, on) => {
+    const el = document.querySelector('input[name="'+name+'"][value="'+(on ? '1' : '0')+'"]');
+    if (el) el.checked = true;
+  };
+  check('resp', !!l?.responded);
+  check('sold', !!l?.sold);
+  check('rap', !!l?.respondedAfterProposal);
+
+  const histList = document.getElementById('hist-list');
+  if (histList) {
+    const items = l.history || [];
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'text-muted';
+      empty.textContent = 'Nenhum registro ainda';
+      histList.appendChild(empty);
+    } else {
+      items.forEach(h => histList.appendChild(histEl(h.text, fmt(h.date))));
+    }
+  }
+
   document.getElementById('modal-footer').innerHTML = `
-    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    ${l?`<button class="btn btn-danger btn-sm" onclick="delLead('${l.id}');closeModal()">🗑 Excluir Lead</button>`:''}
-    <button class="btn btn-primary" onclick="saveLead()">💾 Salvar</button>`;
+    <button type="button" class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+    ${l?`<button type="button" class="btn btn-danger btn-sm" data-action="delete-lead" data-id="${escAttr(l.id)}">Excluir Lead</button>`:''}
+    <button type="button" class="btn btn-primary" data-action="save-lead">Salvar</button>`;
 
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.getElementById('the-modal').scrollTop = 0;
@@ -1368,51 +1507,55 @@ function openLeadModal(id){
 
 function addHist(lid){
   const inp = document.getElementById('hist-input');
-  const text = inp.value.trim();
+  const text = clip(inp.value.trim(), MAX_LEN.hist);
   if (!text) return;
   const l = S.leads.find(x=>x.id===lid);
   if (!l) return;
   if (!l.history) l.history=[];
-  const entry = {date:new Date().toISOString().split('T')[0], text};
-  l.history.push(entry);
+  l.history.push({date:new Date().toISOString().split('T')[0], text});
   save();
   inp.value='';
   const list = document.getElementById('hist-list');
-  list.insertAdjacentHTML('beforeend',`<div class="history-item"><div class="history-dot"></div><div class="history-content"><div>${text}</div><div class="history-date">Hoje</div></div></div>`);
   list.querySelector('.text-muted')?.remove();
+  list.appendChild(histEl(text, 'Hoje'));
   toast('Histórico registrado!','success');
 }
 
 function saveLead(){
   const name = document.getElementById('l-name')?.value.trim();
   if (!name){ toast('Informe o nome do lead','error'); return; }
-  const data = {
+  const prev = S.editId ? S.leads.find(x=>x.id===S.editId) : null;
+  const data = sanitizeLead({
+    id: S.editId || uid(),
     name,
-    instagram:      document.getElementById('l-ig')?.value.trim()||'',
-    phone:          document.getElementById('l-phone')?.value.trim()||'',
-    company:        document.getElementById('l-co')?.value.trim()||'',
-    niche:          document.getElementById('l-ni')?.value.trim()||'',
-    source:         document.getElementById('l-src')?.value.trim()||'',
-    stage:          document.getElementById('l-stage')?.value||'new',
-    serviceType:    document.getElementById('l-svc')?.value.trim()||'',
-    quality:        document.getElementById('l-q')?.value||'B',
-    firstContactDate:document.getElementById('l-d1')?.value||'',
-    meetingDate:    document.getElementById('l-dm')?.value||'',
-    proposalDate:   document.getElementById('l-dp')?.value||'',
-    responded:      document.querySelector('input[name="resp"]:checked')?.value==='1',
-    sold:           document.querySelector('input[name="sold"]:checked')?.value==='1',
+    instagram: document.getElementById('l-ig')?.value.trim()||'',
+    phone: document.getElementById('l-phone')?.value.trim()||'',
+    company: document.getElementById('l-co')?.value.trim()||'',
+    niche: document.getElementById('l-ni')?.value.trim()||'',
+    source: document.getElementById('l-src')?.value.trim()||'',
+    stage: document.getElementById('l-stage')?.value||'new',
+    serviceType: document.getElementById('l-svc')?.value.trim()||'',
+    quality: document.getElementById('l-q')?.value||'B',
+    firstContactDate: document.getElementById('l-d1')?.value||'',
+    meetingDate: document.getElementById('l-dm')?.value||'',
+    proposalDate: document.getElementById('l-dp')?.value||'',
+    responded: document.querySelector('input[name="resp"]:checked')?.value==='1',
+    sold: document.querySelector('input[name="sold"]:checked')?.value==='1',
     respondedAfterProposal: document.querySelector('input[name="rap"]:checked')?.value==='1',
-    contractValue:  parseMoney(document.getElementById('l-val')?.value),
-    nextAction:     document.getElementById('l-next')?.value.trim()||'',
-    objections:     document.getElementById('l-obj')?.value.trim()||'',
-    notes:          document.getElementById('l-notes')?.value.trim()||''
-  };
+    contractValue: parseMoney(document.getElementById('l-val')?.value),
+    nextAction: document.getElementById('l-next')?.value.trim()||'',
+    objections: document.getElementById('l-obj')?.value.trim()||'',
+    notes: document.getElementById('l-notes')?.value.trim()||'',
+    history: prev?.history || [],
+    createdAt: prev?.createdAt || new Date().toISOString().split('T')[0]
+  });
+  if (!data) { toast('Lead inválido','error'); return; }
   if (S.editId){
     const i = S.leads.findIndex(x=>x.id===S.editId);
-    if (i>=0) S.leads[i] = {...S.leads[i], ...data};
+    if (i>=0) S.leads[i] = {...S.leads[i], ...data, id: S.leads[i].id};
     toast('Lead atualizado!','success');
   } else {
-    S.leads.unshift({id:uid(),...data,history:[],createdAt:new Date().toISOString().split('T')[0]});
+    S.leads.unshift(data);
     toast('Lead adicionado!','success');
   }
   save(); closeModal(); render();
@@ -1424,38 +1567,41 @@ function delLead(id){
   S.tasks.filter(x=>x.leadId===id).forEach(t=>pendingDeletes.tasks.add(t.id));
   S.leads = S.leads.filter(x=>x.id!==id);
   S.tasks = S.tasks.filter(x=>x.leadId!==id);
-  save(); render(); toast('Lead excluído','success');
+  save(); render(); closeModal(); toast('Lead excluído','success');
 }
 
 function closeModal(){ document.getElementById('modal-overlay').classList.add('hidden'); S.editId=null; }
 function overlayClick(e){ if(e.target===document.getElementById('modal-overlay')) closeModal(); }
 
-// ═══════════════════════════════════════════════════
-//  TASK MODAL
-// ═══════════════════════════════════════════════════
 function openTaskModal(){
   document.getElementById('modal-title').textContent='Nova Tarefa';
-  const opts = S.leads.map(l=>`<option value="${l.id}">${l.name} (${l.instagram||''})</option>`).join('');
+  const opts = S.leads.map(l=>`<option value="${escAttr(l.id)}">${escHtml(l.name)} (${escHtml(l.instagram||'')})</option>`).join('');
   document.getElementById('modal-body').innerHTML=`
   <div class="form-grid">
-    <div class="form-group form-full"><label>Título *</label><input id="t-title" type="text" placeholder="Ex: Follow-up no Direct"></div>
+    <div class="form-group form-full"><label>Título *</label><input id="t-title" type="text" maxlength="200" placeholder="Ex: Follow-up no Direct"></div>
     <div class="form-group"><label>Lead Vinculado</label><select id="t-lead"><option value="">Sem lead</option>${opts}</select></div>
     <div class="form-group"><label>Data de Vencimento</label><input id="t-due" type="date"></div>
-    <div class="form-group"><label>Prioridade</label><select id="t-pri"><option value="high">🔴 Alta</option><option value="medium" selected>🟡 Média</option><option value="low">🟢 Baixa</option></select></div>
+    <div class="form-group"><label>Prioridade</label><select id="t-pri"><option value="high">Alta</option><option value="medium" selected>Média</option><option value="low">Baixa</option></select></div>
   </div>`;
-  document.getElementById('modal-footer').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveTask()">💾 Salvar Tarefa</button>`;
+  document.getElementById('modal-footer').innerHTML=`<button type="button" class="btn btn-secondary" data-action="close-modal">Cancelar</button><button type="button" class="btn btn-primary" data-action="save-task">Salvar Tarefa</button>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 function saveTask(){
   const t = document.getElementById('t-title')?.value.trim();
   if(!t){ toast('Informe o título','error'); return; }
-  S.tasks.push({id:uid(),leadId:document.getElementById('t-lead').value,title:t,dueDate:document.getElementById('t-due').value,priority:document.getElementById('t-pri').value,done:false,createdAt:new Date().toISOString()});
+  const task = sanitizeTask({
+    id: uid(),
+    leadId: document.getElementById('t-lead').value,
+    title: t,
+    dueDate: document.getElementById('t-due').value,
+    priority: document.getElementById('t-pri').value,
+    done: false,
+    createdAt: new Date().toISOString()
+  });
+  if (!task) { toast('Tarefa inválida','error'); return; }
+  S.tasks.push(task);
   save(); closeModal(); navigate('tasks'); toast('Tarefa criada!','success');
-}
-
-function escHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function vUsers() {
@@ -1479,11 +1625,11 @@ function vUsers() {
     <div class="card">
       <div style="font-weight:700;font-size:15px;margin-bottom:6px">Criar conta</div>
       <p class="text-muted" style="margin-bottom:16px">Só o administrador cria usuários. A pessoa já consegue entrar com e-mail e senha.</p>
-      <form onsubmit="submitCreateUser(event)">
+      <form id="create-user-form">
         <div class="form-group"><label>Nome</label><input id="u-name" type="text" placeholder="Nome da pessoa"></div>
         <div class="form-group"><label>E-mail *</label><input id="u-email" type="email" required placeholder="pessoa@empresa.com"></div>
-        <div class="form-group"><label>Senha provisória *</label><input id="u-pass" type="password" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
-        <div class="form-group"><label>Confirmar senha *</label><input id="u-pass2" type="password" required minlength="6" autocomplete="new-password" placeholder="Repita a senha"></div>
+        <div class="form-group"><label>Senha provisória *</label><input id="u-pass" type="password" required minlength="12" maxlength="128" autocomplete="new-password" placeholder="Mínimo 12 caracteres"></div>
+        <div class="form-group"><label>Confirmar senha *</label><input id="u-pass2" type="password" required minlength="12" maxlength="128" autocomplete="new-password" placeholder="Repita a senha"></div>
         <div class="form-group"><label>Permissão</label>
           <select id="u-role">
             <option value="user">Usuário</option>
@@ -1521,7 +1667,10 @@ async function submitCreateUser(e) {
   const submit = document.getElementById('u-submit');
   const showErr = (msg) => { if (!errEl) return; if (!msg) { errEl.classList.add('hidden'); errEl.textContent = ''; return; } errEl.textContent = msg; errEl.classList.remove('hidden'); };
   showErr('');
+  if (!isValidEmail(email)) { showErr('E-mail inválido.'); return; }
+  if (password.length < MIN_PASSWORD) { showErr('A senha precisa ter pelo menos 12 caracteres.'); return; }
   if (password !== password2) { showErr('As senhas não coincidem.'); return; }
+  if (role !== 'admin' && role !== 'user') { showErr('Permissão inválida.'); return; }
   submit.disabled = true;
   const prev = submit.textContent;
   submit.textContent = 'Criando…';
@@ -1552,14 +1701,14 @@ function vBackup() {
   const cloudOn = !!(sb && currentUser && !localOnly);
 
   return `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+  <div class="split-2" style="margin-bottom:20px">
     <div class="card">
       <div style="font-weight:700;font-size:15px;margin-bottom:16px">${cloudOn ? '☁️ Status da nuvem' : '🔒 Status do Auto-save'}</div>
       <div style="display:flex;align-items:center;gap:12px;padding:14px;background:${cloudOn ? '#E6F6FF' : '#DCFCE7'};border-radius:10px;margin-bottom:14px">
         <span style="font-size:26px">${cloudOn ? '☁️' : '✅'}</span>
         <div>
           <div style="font-weight:700;color:${cloudOn ? '#006eb3' : '#166534'}">${cloudOn ? 'Sincronizado com o Supabase' : 'Auto-save neste navegador'}</div>
-          <div style="font-size:12px;color:${cloudOn ? '#007acc' : '#15803D'}">${cloudOn ? 'Leads e tarefas são salvos na conta ' + (currentUser.email || '') : 'Cada alteração é salva automaticamente neste navegador'}</div>
+          <div style="font-size:12px;color:${cloudOn ? '#007acc' : '#15803D'}">${cloudOn ? 'Leads e tarefas são salvos na conta ' + escHtml(currentUser.email || '') : 'Cada alteração é salva automaticamente neste navegador'}</div>
         </div>
       </div>
       <div style="font-size:13px;color:#374151;margin-bottom:6px">📅 Último save: <strong>${lastSaveStr}</strong></div>
@@ -1569,25 +1718,25 @@ function vBackup() {
     <div class="card">
       <div style="font-weight:700;font-size:15px;margin-bottom:16px">⬇ Backup Manual</div>
       <p style="font-size:13px;color:#64748B;margin-bottom:14px">Salva todos os dados em um arquivo no seu computador.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="backupAgora()">💾 Baixar backup agora</button>
-      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="enviarParaClaude()">⬆ Sincronizar com Claude / Firefox</button>
-      <button class="btn btn-secondary btn-sm" style="width:100%" onclick="document.getElementById('restore-bk').click()">📂 Restaurar de um backup</button>
-      <input type="file" id="restore-bk" accept=".json" style="display:none" onchange="restoreJSON(event)">
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" type="button" data-action="backup-now">💾 Baixar backup agora</button>
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" type="button" data-action="sync-claude">⬆ Sincronizar com Claude / Firefox</button>
+      <button class="btn btn-secondary btn-sm" style="width:100%" type="button" data-action="restore-open" data-target="restore-bk">📂 Restaurar de um backup</button>
+      <input type="file" id="restore-bk" accept=".json" style="display:none" >
     </div>
   </div>
 
   <div class="card" style="margin-bottom:20px">
     <div style="font-weight:700;font-size:15px;margin-bottom:14px">🦊 Sincronização com Firefox</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="split-2" style="gap:14px">
       <div style="padding:14px;background:#FFF7ED;border-radius:10px;border-left:3px solid #F97316">
         <div style="font-weight:700;font-size:13px;color:#9A3412;margin-bottom:5px">Cowork → Firefox</div>
         <div style="font-size:12px;color:#C2410C;margin-bottom:10px">Gera um HTML com seus dados embutidos para abrir direto no Firefox.</div>
-        <button class="btn btn-sm" style="background:#F97316;color:#fff;width:100%" onclick="gerarParaFirefox()">🦊 Gerar HTML para Firefox</button>
+        <button class="btn btn-sm" style="background:#F97316;color:#fff;width:100%" type="button" data-action="firefox-html">🦊 Gerar HTML para Firefox</button>
       </div>
       <div style="padding:14px;background:#E6F6FF;border-radius:10px;border-left:3px solid #009eff">
         <div style="font-weight:700;font-size:13px;color:#006eb3;margin-bottom:5px">Sincronizar com Claude</div>
         <div style="font-size:12px;color:#007acc;margin-bottom:10px">Baixa o JSON e manda para o Claude no chat — ele atualiza tudo.</div>
-        <button class="btn btn-sm" style="background:#009eff;color:#fff;width:100%" onclick="enviarParaClaude()">⬆ Sincronizar</button>
+        <button class="btn btn-sm" style="background:#009eff;color:#fff;width:100%" type="button" data-action="sync-claude">⬆ Sincronizar</button>
       </div>
     </div>
   </div>
@@ -1633,6 +1782,7 @@ function enviarParaClaude() {
 }
 
 function gerarParaFirefox() {
+  if (!confirm('O arquivo HTML gerado contém todos os leads e tarefas. Não compartilhe esse arquivo.')) return;
   const data = JSON.stringify({
     leads: S.leads,
     tasks: S.tasks,
@@ -1668,8 +1818,8 @@ async function tryAutoSyncFromFile() {
     const fileDate = new Date(data.savedAt||0).getTime();
 
     if (fileDate > lsDate) {
-      S.leads = data.leads;
-      S.tasks  = data.tasks || [];
+      S.leads = data.leads.map(sanitizeLead).filter(Boolean);
+      S.tasks  = (data.tasks || []).map(sanitizeTask).filter(Boolean);
       save();
       return true;
     }
@@ -1699,8 +1849,8 @@ function restoreJSON(e) {
       const data = JSON.parse(ev.target.result);
       if (!data.leads) { toast('Arquivo de backup inválido','error'); return; }
       if (!confirm(`Restaurar ${data.leads.length} leads do backup de ${data.backupDate ? new Date(data.backupDate).toLocaleDateString('pt-BR') : 'data desconhecida'}?\n\nIsso substituirá os dados atuais.`)) return;
-      S.leads = data.leads || [];
-      S.tasks = data.tasks || [];
+      S.leads = (data.leads || []).map(sanitizeLead).filter(Boolean);
+      S.tasks = (data.tasks || []).map(sanitizeTask).filter(Boolean);
       save();
       render();
       toast(`✅ ${S.leads.length} leads restaurados com sucesso!`, 'success');
@@ -1728,8 +1878,90 @@ function dlFile(content, name, type){
 // ═══════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════
+
+function onUiClick(e) {
+  if (e.target.id === 'modal-overlay') { closeModal(); return; }
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-action');
+  const id = el.getAttribute('data-id') || '';
+  switch (action) {
+    case 'navigate': navigate(el.getAttribute('data-view')); break;
+    case 'logout': closeMenu(); logout(); break;
+    case 'toggle-menu': toggleMenu(); break;
+    case 'close-menu': closeMenu(); break;
+    case 'open-lead': openLeadModal(id || null); break;
+    case 'delete-lead': delLead(id); break;
+    case 'save-lead': saveLead(); break;
+    case 'close-modal': closeModal(); break;
+    case 'add-hist': addHist(id); break;
+    case 'open-task': openTaskModal(); break;
+    case 'save-task': saveTask(); break;
+    case 'toggle-task': toggleTask(id); break;
+    case 'delete-task': delTask(id); break;
+    case 'confirm-import': confirmImport(); break;
+    case 'cancel-import': cancelImport(); break;
+    case 'download-template': dlTemplate(); break;
+    case 'backup-now': backupAgora(); break;
+    case 'sync-claude': enviarParaClaude(); break;
+    case 'firefox-html': gerarParaFirefox(); break;
+    case 'show-auth': showAuth(el.getAttribute('data-mode')); break;
+    case 'start-local': startLocalMode(); break;
+    case 'export-csv': exportCSV(); break;
+    case 'restore-open': document.getElementById(el.getAttribute('data-target') || 'restore-file')?.click(); break;
+    case 'clear-filters': clearF(); break;
+    case 'pick-csv': document.getElementById('csv-file')?.click(); break;
+  }
+}
+function onUiSubmit(e) {
+  if (e.target.id === 'auth-form') submitAuth(e);
+  if (e.target.id === 'create-user-form') submitCreateUser(e);
+}
+function onUiInput(e) {
+  const f = e.target.getAttribute && e.target.getAttribute('data-filter');
+  if (f === 'q') setF('q', e.target.value);
+}
+function onUiChange(e) {
+  const f = e.target.getAttribute && e.target.getAttribute('data-filter');
+  if (f && f !== 'q') setF(f, e.target.value);
+  if (e.target.id === 'csv-file' && e.target.files && e.target.files[0]) handleFile(e);
+  if ((e.target.id === 'restore-file' || e.target.id === 'restore-bk') && e.target.files && e.target.files[0]) restoreJSON(e);
+}
+function onUiDragStart(e) {
+  const card = e.target.closest('.kanban-card[data-id]');
+  if (!card) return;
+  dStart(e, card.getAttribute('data-id'));
+}
+function onUiDragOver(e) {
+  const col = e.target.closest('[data-drop-stage]');
+  if (!col) return;
+  e.preventDefault();
+  col.classList.add('drag-over');
+}
+function onUiDrop(e) {
+  const col = e.target.closest('[data-drop-stage]');
+  if (!col) return;
+  dDrop(e, col.getAttribute('data-drop-stage'));
+}
+function bindUi() {
+  document.addEventListener('click', onUiClick);
+  document.addEventListener('submit', onUiSubmit);
+  document.addEventListener('input', onUiInput);
+  document.addEventListener('change', onUiChange);
+  document.addEventListener('dragstart', onUiDragStart);
+  document.addEventListener('dragover', onUiDragOver);
+  document.addEventListener('drop', onUiDrop);
+}
+
 document.addEventListener('DOMContentLoaded', async ()=>{
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+  bindUi();
+  document.addEventListener('keydown',e=>{
+    if (e.key==='Escape') {
+      if (document.body.classList.contains('menu-open')) closeMenu();
+      else closeModal();
+    }
+  });
+  window.addEventListener('resize', () => { if (!isDrawerNav()) closeMenu(); });
   window.addEventListener('beforeunload', () => { saveLocal(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') save();

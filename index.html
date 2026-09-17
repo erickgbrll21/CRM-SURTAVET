@@ -2,11 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CRM Surta</title>
 <link rel="icon" type="image/png" href="assets/logo-surta.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" integrity="sha384-DhxhYObIMeMNGyAG7iK11OHzBIKyEIeRL0ad1iFPAOwZB8iirUlTT0O/WJJUk8+o" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js" integrity="sha384-l7yJnh/cWKcqeTC5adHUdc5b+J4Kb2QTGRSkCQehn1YT5xEFlrgwnXOYuvrtI1F6" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="index.css">
 </head>
 <body class="auth-open">
@@ -21,18 +21,18 @@
     <p class="auth-sub" id="auth-sub">Carregando sessão…</p>
     <p class="auth-admin-note hidden" id="auth-admin-note">A conta só é criada por um administrador. Solicite o acesso à equipe responsável.</p>
     <div id="auth-setup" class="auth-setup hidden"></div>
-    <form id="auth-form" class="hidden" onsubmit="submitAuth(event)">
+    <form id="auth-form" class="hidden">
       <div class="form-group">
         <label for="auth-email">E-mail</label>
-        <input id="auth-email" type="email" autocomplete="username" required placeholder="voce@empresa.com">
+        <input id="auth-email" type="email" autocomplete="username" required placeholder="voce@empresa.com" maxlength="254">
       </div>
       <div class="form-group" id="auth-pass-wrap">
         <label for="auth-password">Senha</label>
-        <input id="auth-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+        <input id="auth-password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" placeholder="Mínimo 12 caracteres">
       </div>
       <div class="form-group hidden" id="auth-pass2-wrap">
         <label for="auth-password2">Confirmar senha</label>
-        <input id="auth-password2" type="password" autocomplete="new-password" minlength="6" placeholder="Repita a senha">
+        <input id="auth-password2" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="Repita a senha">
       </div>
       <div class="auth-error hidden" id="auth-error"></div>
       <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">Entrar</button>
@@ -41,21 +41,22 @@
   </div>
 </div>
 
+<div id="sidebar-backdrop" class="sidebar-backdrop" data-action="close-menu"></div>
 <!-- ────────────── SIDEBAR ────────────── -->
-<nav id="sidebar">
+<nav id="sidebar" aria-label="Menu principal">
   <div class="sidebar-logo">
     <img src="assets/logo-surtavet-white.png" alt="Surtavet marketing veterinário">
   </div>
   <div class="sidebar-nav" id="sidebar-nav">
-    <div class="nav-item active" onclick="navigate('dashboard')"><span class="icon">🏠</span><span>Dashboard</span></div>
-    <div class="nav-item" onclick="navigate('leads')"><span class="icon">👥</span><span>Leads</span></div>
-    <div class="nav-item" onclick="navigate('pipeline')"><span class="icon">📋</span><span>Pipeline</span></div>
-    <div class="nav-item" onclick="navigate('clients')"><span class="icon">🏆</span><span>Clientes</span></div>
-    <div class="nav-item" onclick="navigate('tasks')"><span class="icon">✅</span><span>Tarefas</span></div>
-    <div class="nav-item" onclick="navigate('import')"><span class="icon">📥</span><span>Importar Leads</span></div>
-    <div class="nav-item" onclick="navigate('reports')"><span class="icon">📊</span><span>Relatórios</span></div>
-    <div class="nav-item" onclick="navigate('backup')"><span class="icon">🔒</span><span>Backup</span></div>
-    <div class="nav-item hidden" id="nav-users" onclick="navigate('users')"><span class="icon">🛡️</span><span>Usuários</span></div>
+    <div class="nav-item active" data-action="navigate" data-view="dashboard"><span class="icon">🏠</span><span>Dashboard</span></div>
+    <div class="nav-item" data-action="navigate" data-view="leads"><span class="icon">👥</span><span>Leads</span></div>
+    <div class="nav-item" data-action="navigate" data-view="pipeline"><span class="icon">📋</span><span>Pipeline</span></div>
+    <div class="nav-item" data-action="navigate" data-view="clients"><span class="icon">🏆</span><span>Clientes</span></div>
+    <div class="nav-item" data-action="navigate" data-view="tasks"><span class="icon">✅</span><span>Tarefas</span></div>
+    <div class="nav-item" data-action="navigate" data-view="import"><span class="icon">📥</span><span>Importar Leads</span></div>
+    <div class="nav-item" data-action="navigate" data-view="reports"><span class="icon">📊</span><span>Relatórios</span></div>
+    <div class="nav-item" data-action="navigate" data-view="backup"><span class="icon">🔒</span><span>Backup</span></div>
+    <div class="nav-item hidden" id="nav-users" data-action="navigate" data-view="users"><span class="icon">🛡️</span><span>Usuários</span></div>
   </div>
   <div class="sidebar-footer">
     <div class="sidebar-user">
@@ -66,33 +67,38 @@
         <div id="user-role" class="sidebar-role hidden"></div>
       </div>
     </div>
-    <button class="btn btn-sm sidebar-logout" onclick="logout()" id="btn-logout">Sair</button>
+    <button type="button" class="btn btn-sm sidebar-logout" data-action="logout" id="btn-logout">Sair</button>
   </div>
 </nav>
 
 <!-- ────────────── MAIN ────────────── -->
 <div id="main">
   <div class="topbar">
-    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-start">
+      <button type="button" class="menu-btn" id="menu-btn" data-action="toggle-menu" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+        <span class="menu-btn-bars" aria-hidden="true"></span>
+      </button>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+    </div>
     <div class="topbar-actions">
-      <span id="save-indicator" style="font-size:12px;color:#94A3B8;display:flex;align-items:center;gap:4px"></span>
-      <button class="btn btn-primary btn-sm" onclick="enviarParaClaude()" title="Baixa crm_data.json — manda para o Claude no chat para sincronizar com Firefox" style="font-weight:700">⬆ Sincronizar</button>
-      <button class="btn btn-secondary btn-sm" onclick="gerarParaFirefox()" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">🦊 Abrir no Firefox</button>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restore-file').click()" title="Restaurar backup">📂 Restaurar</button>
-      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreJSON(event)">
-      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
-      <button class="btn btn-primary" onclick="openLeadModal(null)">+ Novo Lead</button>
+      <span id="save-indicator" class="save-indicator"></span>
+      <button type="button" class="btn btn-primary btn-sm hide-sm" data-action="sync-claude" title="Baixa crm_data.json — manda para o Claude no chat para sincronizar com Firefox" style="font-weight:700">⬆ Sincronizar</button>
+      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="firefox-html" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">🦊 Abrir no Firefox</button>
+      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="restore-open" data-target="restore-file" title="Restaurar backup">📂 Restaurar</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none">
+      <button type="button" class="btn btn-secondary hide-sm" data-action="export-csv">⬇ Exportar CSV</button>
+      <button type="button" class="btn btn-primary" data-action="open-lead">+ Novo Lead</button>
     </div>
   </div>
   <div class="content" id="content"></div>
 </div>
 
 <!-- ────────────── MODAL ────────────── -->
-<div class="modal-overlay hidden" id="modal-overlay" onclick="overlayClick(event)">
+<div class="modal-overlay hidden" id="modal-overlay">
   <div class="modal" id="the-modal">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">Novo Lead</div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button type="button" class="modal-close" data-action="close-modal">✕</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
     <div class="modal-footer" id="modal-footer"></div>
@@ -106,5 +112,3 @@
 <script src="index.js"></script>
 </body>
 </html>
-
-

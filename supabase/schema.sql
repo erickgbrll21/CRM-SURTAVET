@@ -162,3 +162,28 @@ revoke all on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
 grant select on public.profiles to authenticated;
 revoke insert, update, delete on public.profiles from authenticated, anon;
+
+-- Validação no banco (espelha o front; não substitui RLS)
+update public.leads set stage = 'new' where stage not in (
+  'new','qualified','contacted','followup','responded','meeting','proposal','negotiation','closed','returning','lost'
+);
+update public.leads set quality = 'C' where quality not in ('A','B','C','D');
+update public.tasks set priority = 'medium' where priority not in ('high','medium','low');
+
+alter table public.leads drop constraint if exists leads_stage_chk;
+alter table public.leads add constraint leads_stage_chk check (stage in (
+  'new','qualified','contacted','followup','responded','meeting','proposal','negotiation','closed','returning','lost'
+));
+alter table public.leads drop constraint if exists leads_quality_chk;
+alter table public.leads add constraint leads_quality_chk check (quality in ('A','B','C','D'));
+alter table public.leads drop constraint if exists leads_name_len;
+alter table public.leads add constraint leads_name_len check (char_length(name) between 0 and 200);
+alter table public.leads drop constraint if exists leads_notes_len;
+alter table public.leads add constraint leads_notes_len check (char_length(notes) <= 5000);
+alter table public.leads drop constraint if exists leads_value_nonneg;
+alter table public.leads add constraint leads_value_nonneg check (contract_value >= 0);
+
+alter table public.tasks drop constraint if exists tasks_priority_chk;
+alter table public.tasks add constraint tasks_priority_chk check (priority in ('high','medium','low'));
+alter table public.tasks drop constraint if exists tasks_title_len;
+alter table public.tasks add constraint tasks_title_len check (char_length(title) between 0 and 200);
