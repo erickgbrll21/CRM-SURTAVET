@@ -184,7 +184,15 @@ let enterPromise = null;
 let cloudTimer = null;
 let cloudSaving = false;
 let cloudQueued = false;
+let loadGen = 0;
 const pendingDeletes = { leads: new Set(), tasks: new Set() };
+const LEGACY_STORE = 'scrm_v3';
+
+function storageKey(userId) {
+  const id = userId || currentUser?.id;
+  if (!id || id === 'local' || localOnly) return 'scrm_v3_local';
+  return 'scrm_v3:' + id;
+}
 
 function cfg() { return window.SUPABASE_CONFIG || {}; }
 function isSupabaseConfigured() {
@@ -371,6 +379,9 @@ function showAuth(mode) {
   document.getElementById('auth-password').required = true;
   document.getElementById('auth-password2').required = false;
   pass2.classList.add('hidden');
+  const pass = document.getElementById('auth-password');
+  pass.removeAttribute('minlength');
+  pass.placeholder = 'Sua senha';
   setAuthError('');
   showAuthAdminNote(false);
 
@@ -386,6 +397,8 @@ function showAuth(mode) {
     pass2.classList.remove('hidden');
     document.getElementById('auth-password2').required = true;
     document.getElementById('auth-password').autocomplete = 'new-password';
+    document.getElementById('auth-password').setAttribute('minlength', '12');
+    document.getElementById('auth-password').placeholder = 'Mínimo 12 caracteres';
     submit.textContent = 'Criar conta';
     links.innerHTML = `Já tem conta? <button type="button" data-action="show-auth" data-mode="login">Entrar</button>`;
   } else if (authMode === 'reset') {
@@ -401,6 +414,8 @@ function showAuth(mode) {
     document.getElementById('auth-email').closest('.form-group').classList.add('hidden');
     document.getElementById('auth-email').required = false;
     document.getElementById('auth-password').autocomplete = 'new-password';
+    document.getElementById('auth-password').setAttribute('minlength', '12');
+    document.getElementById('auth-password').placeholder = 'Mínimo 12 caracteres';
     submit.textContent = 'Salvar nova senha';
     links.innerHTML = '';
   } else {
@@ -490,8 +505,9 @@ async function submitAuth(e) {
     }
     if (!isValidEmail(email)) throw new Error('E-mail inválido.');
     if (!password) throw new Error('Informe a senha.');
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    if (data.session) await enterApp(data.session);
   } catch (err) {
     setAuthError(translateAuthError(err.message || 'Falha na autenticação.'));
   } finally {
@@ -509,12 +525,20 @@ function translateAuthError(msg) {
     return 'A conta só é criada por um administrador.';
   }
   if (m.includes('administrador')) return msg;
-  if (m.includes('password') || m.includes('12 caracteres')) return 'A senha precisa ter pelo menos 12 caracteres.';
-  if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Aguarde um momento.';
+  if (m.includes('12 caracteres') || m.includes('password should be') || m.includes('at least 12')) {
+    return 'A senha precisa ter pelo menos 12 caracteres.';
+  }
+  if (m.includes('over_email') || m.includes('rate limit') || m.includes('too many') || m.includes('429')) {
+    return 'Muitas tentativas. Aguarde alguns minutos e entre com e-mail e senha.';
+  }
   return msg;
 }
 
 async function logout() {
+  if (appReady && !localOnly && currentUser && currentUser.id !== 'local') {
+    try { await flushCloudSave(); } catch (e) { /* ainda sai da conta */ }
+  }
+  loadGen += 1;
   if (localOnly) {
     localOnly = false;
     currentUser = null;
@@ -563,10 +587,10 @@ async function enterApp(session) {
   enterPromise = (async () => {
     currentUser = session.user;
     localOnly = false;
-    hideAuth();
     await loadCurrentProfile();
     updateUserUI();
     await loadFromCloud();
+    hideAuth();
     appReady = true;
     navigate(S.view === 'users' && !isAdmin() ? 'dashboard' : (S.view || 'dashboard'));
     if (!S.leads.length) toast('CRM vazio. Adicione leads ou restaure um backup.', '');
@@ -575,6 +599,7 @@ async function enterApp(session) {
 }
 
 function leaveApp() {
+  loadGen += 1;
   appReady = false;
   currentUser = null;
   currentRole = null;
@@ -612,8 +637,8 @@ async function initAuth() {
       if (!localOnly) leaveApp();
       return;
     }
-    if (event === 'INITIAL_SESSION' || (event === 'TOKEN_REFRESHED' && appReady)) return;
-    if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+    if (event === 'TOKEN_REFRESHED' && appReady) return;
+    if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION')) {
       await enterApp(session);
     }
   });
@@ -634,9 +659,23 @@ async function initAuth() {
 // ═══════════════════════════════════════════════════
 //  PERSISTENCE
 // ═══════════════════════════════════════════════════
+function readStore(key) {
+  try {
+    const d = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!d || !Array.isArray(d.leads)) return { leads: [], tasks: [] };
+    return {
+      leads: d.leads.map(sanitizeLead).filter(Boolean),
+      tasks: (d.tasks || []).map(sanitizeTask).filter(Boolean)
+    };
+  } catch (e) {
+    return { leads: [], tasks: [] };
+  }
+}
+
 function saveLocal() {
-  const payload = {leads:S.leads, tasks:S.tasks, savedAt: new Date().toISOString()};
-  localStorage.setItem('scrm_v3', JSON.stringify(payload));
+  if (!currentUser && !localOnly) return;
+  const payload = { leads: S.leads, tasks: S.tasks, savedAt: new Date().toISOString() };
+  localStorage.setItem(storageKey(), JSON.stringify(payload));
 }
 
 function setSaveIndicator(text, later) {
@@ -647,6 +686,7 @@ function setSaveIndicator(text, later) {
 }
 
 function save() {
+  if (!appReady && !localOnly) return;
   saveLocal();
   const h = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if (localOnly || !sb || !currentUser || currentUser.id === 'local') {
@@ -659,25 +699,14 @@ function save() {
 
 function scheduleCloudSave() {
   clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(flushCloudSave, 700);
+  cloudTimer = setTimeout(() => { flushCloudSave().catch(() => {}); }, 400);
 }
 
 async function flushCloudSave() {
-  if (!sb || !currentUser || localOnly) return;
+  if (!sb || !currentUser || localOnly || currentUser.id === 'local') return;
   if (cloudSaving) { cloudQueued = true; return; }
   cloudSaving = true;
   try {
-    const localLeadIds = new Set(S.leads.map(l => l.id));
-    const localTaskIds = new Set(S.tasks.map(t => t.id));
-    const [{ data: remoteLeads, error: e1 }, { data: remoteTasks, error: e2 }] = await Promise.all([
-      sb.from('leads').select('id'),
-      sb.from('tasks').select('id')
-    ]);
-    if (e1) throw e1;
-    if (e2) throw e2;
-    (remoteLeads || []).forEach(r => { if (!localLeadIds.has(r.id)) pendingDeletes.leads.add(r.id); });
-    (remoteTasks || []).forEach(r => { if (!localTaskIds.has(r.id)) pendingDeletes.tasks.add(r.id); });
-
     const leadIds = [...pendingDeletes.leads];
     const taskIds = [...pendingDeletes.tasks];
     pendingDeletes.leads.clear();
@@ -685,11 +714,17 @@ async function flushCloudSave() {
 
     if (leadIds.length) {
       const { error } = await sb.from('leads').delete().in('id', leadIds).eq('user_id', currentUser.id);
-      if (error) throw error;
+      if (error) {
+        leadIds.forEach(id => pendingDeletes.leads.add(id));
+        throw error;
+      }
     }
     if (taskIds.length) {
       const { error } = await sb.from('tasks').delete().in('id', taskIds).eq('user_id', currentUser.id);
-      if (error) throw error;
+      if (error) {
+        taskIds.forEach(id => pendingDeletes.tasks.add(id));
+        throw error;
+      }
     }
     if (S.leads.length) {
       const { error } = await sb.from('leads').upsert(S.leads.map(toDbLead), { onConflict: 'user_id,id' });
@@ -699,11 +734,13 @@ async function flushCloudSave() {
       const { error } = await sb.from('tasks').upsert(S.tasks.map(toDbTask), { onConflict: 'user_id,id' });
       if (error) throw error;
     }
+    saveLocal();
     const h = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     setSaveIndicator(`☁️ Salvo na nuvem às ${h}`, '☁️ Sincronizado com o Supabase');
   } catch (err) {
     setSaveIndicator('⚠️ Falha ao salvar na nuvem');
     toast(err.message || 'Não foi possível salvar no Supabase', 'error');
+    throw err;
   } finally {
     cloudSaving = false;
     if (cloudQueued) {
@@ -720,34 +757,31 @@ function loadLocal() {
     saveLocal();
     return;
   }
-  try {
-    const d = JSON.parse(localStorage.getItem('scrm_v3') || 'null');
-    if (d && d.leads) {
-      S.leads = d.leads.map(sanitizeLead).filter(Boolean);
-      S.tasks = (d.tasks || []).map(sanitizeTask).filter(Boolean);
-    } else {
-      S.leads = [];
-      S.tasks = [];
-    }
-  } catch(e) {
-    S.leads = [];
-    S.tasks = [];
+  const stored = readStore(storageKey());
+  if (stored.leads.length || stored.tasks.length) {
+    S.leads = stored.leads;
+    S.tasks = stored.tasks;
+    return;
   }
-}
-
-function hasLocalData() {
-  try {
-    const d = JSON.parse(localStorage.getItem('scrm_v3') || 'null');
-    return !!(d && ((d.leads && d.leads.length) || (d.tasks && d.tasks.length)));
-  } catch(e) { return false; }
+  const legacy = readStore(LEGACY_STORE);
+  S.leads = legacy.leads;
+  S.tasks = legacy.tasks;
+  if ((legacy.leads.length || legacy.tasks.length) && currentUser?.id && currentUser.id !== 'local') {
+    saveLocal();
+    localStorage.removeItem(LEGACY_STORE);
+  }
 }
 
 async function loadFromCloud() {
   if (!sb || !currentUser) return;
+  const gen = ++loadGen;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.user || session.user.id !== currentUser.id) return;
   const [leadsRes, tasksRes] = await Promise.all([
     sb.from('leads').select('*').order('created_at', { ascending: false }),
     sb.from('tasks').select('*').order('created_at', { ascending: false })
   ]);
+  if (gen !== loadGen) return;
   if (leadsRes.error) {
     toast('Erro ao carregar leads: ' + leadsRes.error.message, 'error');
     loadLocal();
@@ -758,17 +792,21 @@ async function loadFromCloud() {
     loadLocal();
     return;
   }
-  S.leads = (leadsRes.data || []).map(fromDbLead).filter(Boolean);
-  S.tasks = (tasksRes.data || []).map(fromDbTask).filter(Boolean);
-  saveLocal();
-
-  if (!S.leads.length && !S.tasks.length && hasLocalData()) {
-    if (confirm('Encontramos leads salvos neste navegador e a nuvem está vazia.\n\nEnviar esses dados para o Supabase?')) {
-      loadLocal();
-      await flushCloudSave();
-      toast('Dados locais enviados para a nuvem.', 'success');
+  const cloudLeads = (leadsRes.data || []).map(fromDbLead).filter(Boolean);
+  const cloudTasks = (tasksRes.data || []).map(fromDbTask).filter(Boolean);
+  if (!cloudLeads.length && !cloudTasks.length) {
+    loadLocal();
+    if (S.leads.length || S.tasks.length) {
+      try {
+        await flushCloudSave();
+        toast('Dados deste navegador enviados para a nuvem.', 'success');
+      } catch (e) { /* cache local mantido */ }
     }
+    return;
   }
+  S.leads = cloudLeads;
+  S.tasks = cloudTasks;
+  saveLocal();
 }
 
 function load() {
@@ -1059,6 +1097,7 @@ function dDrop(e, stageId) {
     if (stageId==='responded') l.responded = true;
     if (stageId==='closed')    l.sold = true;
     save(); render();
+    flushCloudSave().catch(() => {});
     toast(`Movido para "${stage(stageId).name}"`, 'success');
   }
   dragId = null;
@@ -1139,11 +1178,12 @@ function vTasks() {
   ${done.length?`<div class="card" style="padding:0"><div style="padding:14px 16px;font-weight:700;color:#94A3B8;border-bottom:1px solid #F1F5F9">✅ Concluídas (${done.length})</div>${done.map(tRow).join('')}</div>`:''} `;
 }
 
-function toggleTask(id) { const t=S.tasks.find(x=>x.id===id); if(t){t.done=!t.done;save();render();} }
+function toggleTask(id) { const t=S.tasks.find(x=>x.id===id); if(t){t.done=!t.done;save();render();flushCloudSave().catch(()=>{});} }
 function delTask(id)   {
   pendingDeletes.tasks.add(id);
   S.tasks=S.tasks.filter(x=>x.id!==id);
   save();render();
+  flushCloudSave().catch(() => {});
 }
 
 // ═══════════════════════════════════════════════════
@@ -1299,6 +1339,7 @@ function confirmImport(){
   S.leads.push(...pending.map(sanitizeLead).filter(l => l && l.name));
   pending=[];
   save();
+  flushCloudSave().catch(() => {});
   toast(`${n} leads importados com sucesso!`, 'success');
   navigate('leads');
 }
@@ -1519,6 +1560,7 @@ function addHist(lid){
   list.querySelector('.text-muted')?.remove();
   list.appendChild(histEl(text, 'Hoje'));
   toast('Histórico registrado!','success');
+  flushCloudSave().catch(() => {});
 }
 
 function saveLead(){
@@ -1558,7 +1600,10 @@ function saveLead(){
     S.leads.unshift(data);
     toast('Lead adicionado!','success');
   }
-  save(); closeModal(); render();
+  save();
+  closeModal();
+  render();
+  flushCloudSave().catch(() => {});
 }
 
 function delLead(id){
@@ -1568,6 +1613,7 @@ function delLead(id){
   S.leads = S.leads.filter(x=>x.id!==id);
   S.tasks = S.tasks.filter(x=>x.leadId!==id);
   save(); render(); closeModal(); toast('Lead excluído','success');
+  flushCloudSave().catch(() => {});
 }
 
 function closeModal(){ document.getElementById('modal-overlay').classList.add('hidden'); S.editId=null; }
@@ -1602,6 +1648,7 @@ function saveTask(){
   if (!task) { toast('Tarefa inválida','error'); return; }
   S.tasks.push(task);
   save(); closeModal(); navigate('tasks'); toast('Tarefa criada!','success');
+  flushCloudSave().catch(() => {});
 }
 
 function vUsers() {
@@ -1852,6 +1899,7 @@ function restoreJSON(e) {
       S.leads = (data.leads || []).map(sanitizeLead).filter(Boolean);
       S.tasks = (data.tasks || []).map(sanitizeTask).filter(Boolean);
       save();
+      flushCloudSave().catch(() => {});
       render();
       toast(`✅ ${S.leads.length} leads restaurados com sucesso!`, 'success');
     } catch(err) { toast('Erro ao ler o arquivo de backup','error'); }
@@ -1964,7 +2012,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   window.addEventListener('resize', () => { if (!isDrawerNav()) closeMenu(); });
   window.addEventListener('beforeunload', () => { saveLocal(); });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') save();
+    if (document.visibilityState === 'hidden' && appReady) {
+      saveLocal();
+      if (!localOnly && currentUser && currentUser.id !== 'local') flushCloudSave().catch(() => {});
+    }
   });
   await initAuth();
 });
