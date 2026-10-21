@@ -588,14 +588,22 @@ async function enterApp(session) {
   enterPromise = (async () => {
     currentUser = session.user;
     localOnly = false;
-    await loadCurrentProfile();
+    try { await loadCurrentProfile(); } catch (e) { /* segue com o que já está salvo */ }
     updateUserUI();
-    await loadFromCloud();
+    try {
+      await loadFromCloud();
+    } catch (e) {
+      loadLocal();
+      toast('Não foi possível carregar a nuvem. Mostrando os dados deste navegador.', 'error');
+    }
     hideAuth();
     appReady = true;
     navigate(S.view === 'users' && !isAdmin() ? 'dashboard' : (S.view || 'dashboard'));
     if (!S.leads.length) toast('CRM vazio. Adicione leads ou restaure um backup.', '');
-  })().finally(() => { enterPromise = null; });
+  })().catch(() => {
+    showAuth('login');
+    setAuthError('Não foi possível abrir a sessão. Entre de novo.');
+  }).finally(() => { enterPromise = null; });
   return enterPromise;
 }
 
@@ -629,7 +637,7 @@ async function initAuth() {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
 
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
       showAuth('recovery');
       return;
@@ -640,7 +648,8 @@ async function initAuth() {
     }
     if (event === 'TOKEN_REFRESHED' && appReady) return;
     if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION')) {
-      await enterApp(session);
+      // Adia o acesso ao banco. Esperar aqui dentro trava o getSession e a tela fica em "Carregando sessão…".
+      setTimeout(() => { enterApp(session); }, 0);
     }
   });
 
@@ -776,13 +785,12 @@ function loadLocal() {
 async function loadFromCloud() {
   if (!sb || !currentUser) return;
   const gen = ++loadGen;
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session?.user || session.user.id !== currentUser.id) return;
+  const userId = currentUser.id;
   const [leadsRes, tasksRes] = await Promise.all([
     sb.from('leads').select('*').order('created_at', { ascending: false }),
     sb.from('tasks').select('*').order('created_at', { ascending: false })
   ]);
-  if (gen !== loadGen) return;
+  if (gen !== loadGen || currentUser?.id !== userId) return;
   if (leadsRes.error) {
     toast('Erro ao carregar leads: ' + leadsRes.error.message, 'error');
     loadLocal();
