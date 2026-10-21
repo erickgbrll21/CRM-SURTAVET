@@ -48,19 +48,19 @@
     <img src="assets/logo-surtavet-white.png" alt="Surtavet marketing veterinário">
   </div>
   <div class="sidebar-nav" id="sidebar-nav">
-    <div class="nav-item active" data-action="navigate" data-view="dashboard"><span class="icon">🏠</span><span>Dashboard</span></div>
-    <div class="nav-item" data-action="navigate" data-view="leads"><span class="icon">👥</span><span>Leads</span></div>
-    <div class="nav-item" data-action="navigate" data-view="pipeline"><span class="icon">📋</span><span>Pipeline</span></div>
-    <div class="nav-item" data-action="navigate" data-view="clients"><span class="icon">🏆</span><span>Clientes</span></div>
-    <div class="nav-item" data-action="navigate" data-view="tasks"><span class="icon">✅</span><span>Tarefas</span></div>
-    <div class="nav-item" data-action="navigate" data-view="import"><span class="icon">📥</span><span>Importar Leads</span></div>
-    <div class="nav-item" data-action="navigate" data-view="reports"><span class="icon">📊</span><span>Relatórios</span></div>
-    <div class="nav-item" data-action="navigate" data-view="backup"><span class="icon">🔒</span><span>Backup</span></div>
-    <div class="nav-item hidden" id="nav-users" data-action="navigate" data-view="users"><span class="icon">🛡️</span><span>Usuários</span></div>
+    <div class="nav-item active" data-action="navigate" data-view="dashboard"><span>Dashboard</span></div>
+    <div class="nav-item" data-action="navigate" data-view="leads"><span>Leads</span></div>
+    <div class="nav-item" data-action="navigate" data-view="pipeline"><span>Pipeline</span></div>
+    <div class="nav-item" data-action="navigate" data-view="clients"><span>Clientes</span></div>
+    <div class="nav-item" data-action="navigate" data-view="tasks"><span>Tarefas</span></div>
+    <div class="nav-item" data-action="navigate" data-view="agenda"><span>Conteúdos</span></div>
+    <div class="nav-item" data-action="navigate" data-view="import"><span>Importar Leads</span></div>
+    <div class="nav-item" data-action="navigate" data-view="reports"><span>Relatórios</span></div>
+    <div class="nav-item" data-action="navigate" data-view="backup"><span>Backup</span></div>
+    <div class="nav-item hidden" id="nav-users" data-action="navigate" data-view="users"><span>Usuários</span></div>
   </div>
   <div class="sidebar-footer">
     <div class="sidebar-user">
-      <span style="font-size:22px">👤</span>
       <div style="min-width:0;flex:1">
         <div id="user-name">Social Media</div>
         <div id="user-email">Manager</div>
@@ -82,11 +82,11 @@
     </div>
     <div class="topbar-actions">
       <span id="save-indicator" class="save-indicator"></span>
-      <button type="button" class="btn btn-primary btn-sm hide-sm" data-action="sync-claude" title="Baixa crm_data.json — manda para o Claude no chat para sincronizar com Firefox" style="font-weight:700">⬆ Sincronizar</button>
-      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="firefox-html" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">🦊 Abrir no Firefox</button>
-      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="restore-open" data-target="restore-file" title="Restaurar backup">📂 Restaurar</button>
+      <button type="button" class="btn btn-primary btn-sm hide-sm" data-action="sync-claude" title="Baixa crm_data.json — manda para o Claude no chat para sincronizar com Firefox" style="font-weight:700">Sincronizar</button>
+      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="firefox-html" title="Baixa HTML completo com seus dados embutidos" style="border-color:#FF6611;color:#FF6611;font-weight:700">Abrir no Firefox</button>
+      <button type="button" class="btn btn-secondary btn-sm hide-sm" data-action="restore-open" data-target="restore-file" title="Restaurar backup">Restaurar</button>
       <input type="file" id="restore-file" accept=".json" style="display:none">
-      <button type="button" class="btn btn-secondary hide-sm" data-action="export-csv">⬇ Exportar CSV</button>
+      <button type="button" class="btn btn-secondary hide-sm" data-action="export-csv">Exportar CSV</button>
       <button type="button" class="btn btn-primary" data-action="open-lead">+ Novo Lead</button>
     </div>
   </div>
@@ -98,7 +98,7 @@
   <div class="modal" id="the-modal">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">Novo Lead</div>
-      <button type="button" class="modal-close" data-action="close-modal">✕</button>
+      <button type="button" class="modal-close" data-action="close-modal" aria-label="Fechar">×</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
     <div class="modal-footer" id="modal-footer"></div>

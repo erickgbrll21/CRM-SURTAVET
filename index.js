@@ -2,20 +2,20 @@
 //  CONSTANTS
 // ═══════════════════════════════════════════════════
 const STAGES = [
-  { id:'new',         name:'Novo Lead',              color:'#6B7280', icon:'🌱' },
-  { id:'qualified',   name:'Lead Qualificado',        color:'#3B82F6', icon:'⭐' },
-  { id:'contacted',   name:'Primeiro Contato',        color:'#6366F1', icon:'📤' },
-  { id:'followup',    name:'Follow-up',               color:'#8B5CF6', icon:'🔄' },
-  { id:'responded',   name:'Respondeu',               color:'#F59E0B', icon:'💬' },
-  { id:'meeting',     name:'Reunião Marcada',         color:'#F97316', icon:'📅' },
-  { id:'proposal',    name:'Proposta Enviada',        color:'#06B6D4', icon:'📄' },
-  { id:'negotiation', name:'Negociação',              color:'#14B8A6', icon:'🤝' },
-  { id:'closed',      name:'Cliente Fechado',         color:'#10B981', icon:'🏆' },
-  { id:'returning',   name:'Cliente Antigo',          color:'#A855F7', icon:'⭐' },
-  { id:'lost',        name:'Perdido',                 color:'#EF4444', icon:'❌' }
+  { id:'new',         name:'Novo Lead',              color:'#6B7280' },
+  { id:'qualified',   name:'Lead Qualificado',        color:'#3B82F6' },
+  { id:'contacted',   name:'Primeiro Contato',        color:'#6366F1' },
+  { id:'followup',    name:'Follow-up',               color:'#8B5CF6' },
+  { id:'responded',   name:'Respondeu',               color:'#F59E0B' },
+  { id:'meeting',     name:'Reunião Marcada',         color:'#F97316' },
+  { id:'proposal',    name:'Proposta Enviada',        color:'#06B6D4' },
+  { id:'negotiation', name:'Negociação',              color:'#14B8A6' },
+  { id:'closed',      name:'Cliente Fechado',         color:'#10B981' },
+  { id:'returning',   name:'Cliente Antigo',          color:'#A855F7' },
+  { id:'lost',        name:'Perdido',                 color:'#EF4444' }
 ];
 
-const QL = { A:'🔥 Hot', B:'😊 Warm', C:'❄️ Cold', D:'🧊 Frozen' };
+const QL = { A:'Hot', B:'Warm', C:'Cold', D:'Frozen' };
 const QC = { A:'badge-A', B:'badge-B', C:'badge-C', D:'badge-D' };
 
 // ═══════════════════════════════════════════════════
@@ -72,7 +72,7 @@ function toast(msg, type='') {
   const t = document.getElementById('toasts');
   const el = document.createElement('div');
   el.className = 'toast '+(type||'');
-  el.textContent = (type==='success'?'✅ ':type==='error'?'❌ ':'ℹ️ ') + msg;
+  el.textContent = msg;
   t.appendChild(el);
   setTimeout(()=>el.remove(), 2800);
 }
@@ -535,6 +535,7 @@ function translateAuthError(msg) {
 }
 
 async function logout() {
+  clearGoogleSession();
   if (appReady && !localOnly && currentUser && currentUser.id !== 'local') {
     try { await flushCloudSave(); } catch (e) { /* ainda sai da conta */ }
   }
@@ -690,10 +691,10 @@ function save() {
   saveLocal();
   const h = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if (localOnly || !sb || !currentUser || currentUser.id === 'local') {
-    setSaveIndicator(`✅ Salvo às ${h}`, '🔒 Auto-salvo neste navegador');
+    setSaveIndicator(`Salvo às ${h}`, 'Auto-salvo neste navegador');
     return;
   }
-  setSaveIndicator('☁️ Salvando na nuvem…');
+  setSaveIndicator('Salvando na nuvem…');
   scheduleCloudSave();
 }
 
@@ -736,9 +737,9 @@ async function flushCloudSave() {
     }
     saveLocal();
     const h = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    setSaveIndicator(`☁️ Salvo na nuvem às ${h}`, '☁️ Sincronizado com o Supabase');
+    setSaveIndicator(`Salvo na nuvem às ${h}`, 'Sincronizado com o Supabase');
   } catch (err) {
-    setSaveIndicator('⚠️ Falha ao salvar na nuvem');
+    setSaveIndicator('Falha ao salvar na nuvem');
     toast(err.message || 'Não foi possível salvar no Supabase', 'error');
     throw err;
   } finally {
@@ -817,7 +818,7 @@ function demo() {
   return [
     { id:uid(), name:'Ana Beatriz Lima', instagram:'@anabeatrizlima', phone:'(11) 98765-4321', company:'Studio AB', niche:'Moda', stage:'meeting', quality:'A', serviceType:'', firstContactDate:'2026-07-20', meetingDate:'2026-07-28', proposalDate:'', responded:true, respondedAfterProposal:false, sold:false, contractValue:2500, nextAction:'Enviar proposta detalhada', objections:'Acha caro', notes:'Muito interessada em gestão completa', history:[{date:'2026-07-20',text:'Primeiro DM enviado — respondeu rápido'},{date:'2026-07-28',text:'Reunião no Google Meet — ótima receptividade'}], createdAt:'2026-07-20' },
     { id:uid(), name:'Carlos Mendes', instagram:'@carlosmendes.fit', phone:'', company:'CM Fitness', niche:'Fitness', stage:'contacted', quality:'B', serviceType:'', firstContactDate:'2026-07-25', meetingDate:'', proposalDate:'', responded:false, respondedAfterProposal:false, sold:false, contractValue:0, nextAction:'Follow-up amanhã', objections:'', notes:'Personal trainer querendo crescer no Instagram', history:[{date:'2026-07-25',text:'DM enviado com proposta de reunião'}], createdAt:'2026-07-25' },
-    { id:uid(), name:'Mariana Costa', instagram:'@docemariacafe', phone:'(21) 97654-3210', company:'Doce Maria Café', niche:'Food', stage:'closed', quality:'A', serviceType:'Gestão Social Media', firstContactDate:'2026-06-10', meetingDate:'2026-06-15', proposalDate:'2026-06-18', responded:true, respondedAfterProposal:true, sold:true, contractValue:1800, nextAction:'Planejar conteúdo de agosto', objections:'', notes:'Cliente fidelizada, ótimo relacionamento', history:[{date:'2026-06-10',text:'Contato via indicação'},{date:'2026-06-15',text:'Reunião realizada'},{date:'2026-06-20',text:'Contrato assinado 🎉'}], createdAt:'2026-06-10' },
+    { id:uid(), name:'Mariana Costa', instagram:'@docemariacafe', phone:'(21) 97654-3210', company:'Doce Maria Café', niche:'Food', stage:'closed', quality:'A', serviceType:'Gestão Social Media', firstContactDate:'2026-06-10', meetingDate:'2026-06-15', proposalDate:'2026-06-18', responded:true, respondedAfterProposal:true, sold:true, contractValue:1800, nextAction:'Planejar conteúdo de agosto', objections:'', notes:'Cliente fidelizada, ótimo relacionamento', history:[{date:'2026-06-10',text:'Contato via indicação'},{date:'2026-06-15',text:'Reunião realizada'},{date:'2026-06-20',text:'Contrato assinado'}], createdAt:'2026-06-10' },
     { id:uid(), name:'Luísa Ferreira', instagram:'@luisa.deco', phone:'(31) 99876-5432', company:'Luísa Decor', niche:'Decoração', stage:'proposal', quality:'A', serviceType:'', firstContactDate:'2026-07-28', meetingDate:'2026-08-01', proposalDate:'2026-08-02', responded:true, respondedAfterProposal:false, sold:false, contractValue:3200, nextAction:'Aguardar retorno até sexta', objections:'Quer incluir Pinterest', notes:'Loja física + e-commerce, muito potencial', history:[{date:'2026-07-28',text:'Indicação de cliente'},{date:'2026-08-02',text:'Proposta de R$3.200/mês enviada'}], createdAt:'2026-07-28' },
     { id:uid(), name:'Pedro Henrique', instagram:'@phadvogado', phone:'', company:'PH Advocacia', niche:'Jurídico', stage:'lost', quality:'C', serviceType:'', firstContactDate:'2026-07-01', meetingDate:'2026-07-08', proposalDate:'2026-07-10', responded:true, respondedAfterProposal:false, sold:false, contractValue:0, nextAction:'', objections:'Preferiu agência mais barata', notes:'Perdemos por preço', history:[{date:'2026-07-01',text:'Contato inicial'},{date:'2026-07-10',text:'Proposta enviada'},{date:'2026-07-15',text:'Recusou — foi para concorrente'}], createdAt:'2026-07-01' }
   ];
@@ -828,10 +829,661 @@ function demoTasks() {
 }
 
 // ═══════════════════════════════════════════════════
+//  GOOGLE AGENDA
+// ═══════════════════════════════════════════════════
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events email';
+let gcalToken = '';
+let gcalExp = 0;
+let gcalEmail = '';
+try {
+  gcalToken = sessionStorage.getItem('gcal_token') || '';
+  gcalExp = Number(sessionStorage.getItem('gcal_exp') || 0);
+  gcalEmail = sessionStorage.getItem('gcal_email') || '';
+} catch (e) { /* sessão indisponível */ }
+
+function googleClientId() {
+  const id = String(cfg().googleClientId || '').trim();
+  if (!id || id.includes('COLE')) return '';
+  return id;
+}
+function gcalConnected() {
+  return !!(gcalToken && Date.now() < gcalExp - 15000);
+}
+function clearGoogleSession() {
+  const token = gcalToken;
+  gcalToken = '';
+  gcalExp = 0;
+  gcalEmail = '';
+  try {
+    sessionStorage.removeItem('gcal_token');
+    sessionStorage.removeItem('gcal_exp');
+    sessionStorage.removeItem('gcal_email');
+  } catch (e) {}
+  if (token && window.google?.accounts?.oauth2) {
+    try { google.accounts.oauth2.revoke(token, () => {}); } catch (e) {}
+  }
+}
+function disconnectGoogle() {
+  clearGoogleSession();
+  toast('Google Agenda desconectado.', 'success');
+  if (S.view === 'agenda') render();
+}
+function loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const done = () => window.google?.accounts?.oauth2 ? resolve() : reject(new Error('Não foi possível carregar o login do Google.'));
+    const existing = document.getElementById('gis-script');
+    if (existing) {
+      existing.addEventListener('load', done);
+      existing.addEventListener('error', () => reject(new Error('Não foi possível carregar o login do Google.')));
+      return;
+    }
+    const s = document.createElement('script');
+    s.id = 'gis-script';
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = done;
+    s.onerror = () => reject(new Error('Não foi possível carregar o login do Google. Verifique a conexão.'));
+    document.head.appendChild(s);
+  });
+}
+function connectGoogle() {
+  const clientId = googleClientId();
+  if (!clientId) return Promise.reject(new Error('Falta o Client ID do Google em config.js.'));
+  if (gcalConnected()) return Promise.resolve(gcalToken);
+  return loadGis().then(() => new Promise((resolve, reject) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: GCAL_SCOPE,
+      callback: (resp) => {
+        if (!resp || resp.error) {
+          reject(new Error(resp?.error === 'access_denied' ? 'Conexão com o Google cancelada.' : 'Não foi possível conectar ao Google.'));
+          return;
+        }
+        gcalToken = resp.access_token;
+        gcalExp = Date.now() + (Number(resp.expires_in) || 3600) * 1000;
+        try {
+          sessionStorage.setItem('gcal_token', gcalToken);
+          sessionStorage.setItem('gcal_exp', String(gcalExp));
+        } catch (e) {}
+        gcalFetch('https://www.googleapis.com/oauth2/v3/userinfo').then(me => {
+          gcalEmail = me.email || '';
+          try { sessionStorage.setItem('gcal_email', gcalEmail); } catch (e) {}
+        }).catch(() => {}).finally(() => resolve(gcalToken));
+      },
+      error_callback: (err) => {
+        const type = err && err.type;
+        if (type === 'popup_failed_to_open') reject(new Error('O navegador bloqueou a janela do Google. Permita pop-ups neste site.'));
+        else if (type === 'popup_closed') reject(new Error('A janela do Google foi fechada antes de concluir.'));
+        else reject(new Error('Não foi possível abrir o login do Google.'));
+      }
+    });
+    client.requestAccessToken({ prompt: 'consent' });
+  }));
+}
+async function gcalFetch(url, options) {
+  const res = await fetch(url, {
+    method: options?.method || 'GET',
+    headers: {
+      Authorization: 'Bearer ' + gcalToken,
+      'Content-Type': 'application/json'
+    },
+    body: options?.body
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data.error?.message || '';
+    if (res.status === 401) {
+      gcalToken = '';
+      gcalExp = 0;
+      try { sessionStorage.removeItem('gcal_token'); sessionStorage.removeItem('gcal_exp'); } catch (e) {}
+      throw new Error('A sessão do Google expirou. Conecte de novo.');
+    }
+    if (res.status === 403 && /has not been used|accessNotConfigured|disabled/i.test(msg)) {
+      throw new Error('Ative a Google Calendar API no projeto do Google Cloud.');
+    }
+    throw new Error(msg || 'O Google Agenda recusou o pedido.');
+  }
+  return data;
+}
+async function listUpcomingEvents() {
+  const min = new Date().toISOString();
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=30&timeMin=' + encodeURIComponent(min);
+  const data = await gcalFetch(url);
+  return data.items || [];
+}
+function meetingDescription(lead, note) {
+  const lines = [];
+  if (lead) {
+    lines.push('Lead: ' + (lead.name || ''));
+    if (lead.company) lines.push('Empresa: ' + lead.company);
+    if (lead.instagram) lines.push('Instagram: ' + lead.instagram);
+    if (lead.phone) lines.push('Telefone: ' + lead.phone);
+    if (lead.niche) lines.push('Nicho: ' + lead.niche);
+    if (lead.notes) lines.push('', String(lead.notes).slice(0, 1500));
+  }
+  if (note) lines.push('', note);
+  lines.push('', 'Criado pelo CRM Surta.');
+  return lines.join('\n').slice(0, 7000);
+}
+async function createCalendarEvent(input) {
+  await connectGoogle();
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+  const start = new Date(input.date + 'T' + input.time + ':00');
+  if (Number.isNaN(start.getTime())) throw new Error('Data ou horário inválido.');
+  const end = new Date(start.getTime() + input.minutes * 60000);
+  const body = {
+    summary: input.title,
+    description: input.description,
+    start: { dateTime: start.toISOString(), timeZone: tz },
+    end: { dateTime: end.toISOString(), timeZone: tz },
+    reminders: { useDefault: true }
+  };
+  if (input.email) body.attendees = [{ email: input.email }];
+  if (input.leadId) body.extendedProperties = { private: { crmLeadId: input.leadId } };
+  const send = async (withMeet) => {
+    const params = new URLSearchParams();
+    if (withMeet) {
+      body.conferenceData = {
+        createRequest: { requestId: uid(), conferenceSolutionKey: { type: 'hangoutsMeet' } }
+      };
+      params.set('conferenceDataVersion', '1');
+    } else {
+      delete body.conferenceData;
+    }
+    if (input.email) params.set('sendUpdates', 'all');
+    const qs = params.toString();
+    return gcalFetch('https://www.googleapis.com/calendar/v3/calendars/primary/events' + (qs ? '?' + qs : ''), {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  };
+  if (!input.meet) return send(false);
+  try {
+    return await send(true);
+  } catch (err) {
+    if (!/conference/i.test(err.message || '')) throw err;
+    const event = await send(false);
+    event._meetFailed = true;
+    return event;
+  }
+}
+function applyMeetingToLead(lead, input, event) {
+  if (!lead) return;
+  const early = new Set(['new', 'qualified', 'contacted', 'followup', 'responded']);
+  if (early.has(lead.stage)) lead.stage = 'meeting';
+  lead.meetingDate = input.date;
+  const when = new Date(input.date + 'T' + input.time + ':00');
+  const whenLabel = when.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  const meet = event.hangoutLink || '';
+  const link = event.htmlLink || '';
+  const text = clip('Reunião marcada para ' + whenLabel + (link ? '. Agenda: ' + link : '') + (meet ? '. Meet: ' + meet : ''), MAX_LEN.hist);
+  if (!Array.isArray(lead.history)) lead.history = [];
+  lead.history.push({ date: input.date, text });
+  if (!lead.nextAction) lead.nextAction = clip('Reunião em ' + whenLabel, MAX_LEN.nextAction);
+}
+function localDatePlus(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function openMeetingModal(leadId) {
+  const lead = leadId ? S.leads.find(l => l.id === leadId) : null;
+  const opts = S.leads.map(l => `<option value="${escAttr(l.id)}" ${lead && l.id === lead.id ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('');
+  document.getElementById('modal-title').textContent = 'Marcar reunião';
+  document.getElementById('modal-body').innerHTML = `
+  <p class="text-muted" style="margin-bottom:14px">A reunião entra na agenda principal do Gmail conectado. Se informar um e-mail, o Google envia o convite.</p>
+  <div class="form-grid">
+    <div class="form-group form-full"><label for="m-lead">Lead</label><select id="m-lead"><option value="">Sem lead</option>${opts}</select></div>
+    <div class="form-group form-full"><label for="m-title">Título *</label><input id="m-title" type="text" maxlength="200" value="${escAttr(lead ? 'Reunião — ' + lead.name : '')}"></div>
+    <div class="form-group"><label for="m-date">Data *</label><input id="m-date" type="date" value="${localDatePlus(1)}"></div>
+    <div class="form-group"><label for="m-time">Horário *</label><input id="m-time" type="time" value="10:00"></div>
+    <div class="form-group"><label for="m-dur">Duração</label>
+      <select id="m-dur"><option value="15">15 min</option><option value="30">30 min</option><option value="45" selected>45 min</option><option value="60">1 hora</option><option value="90">1 h 30</option></select>
+    </div>
+    <div class="form-group"><label for="m-email">E-mail do convidado</label><input id="m-email" type="email" maxlength="254" placeholder="cliente@email.com"></div>
+    <div class="form-group form-full"><label for="m-note">Observação no convite</label><textarea id="m-note" maxlength="1500" placeholder="Pauta, link extra ou combinado"></textarea></div>
+    <label class="check-line form-full"><input id="m-meet" type="checkbox" checked> Criar link do Google Meet</label>
+    <label class="check-line form-full"><input id="m-task" type="checkbox" checked> Criar tarefa de acompanhamento no CRM</label>
+  </div>`;
+  document.getElementById('modal-footer').innerHTML = `<button type="button" class="btn btn-secondary" data-action="close-modal">Cancelar</button><button type="button" class="btn btn-primary" id="m-submit" data-action="save-meeting">Criar na agenda</button>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('the-modal').scrollTop = 0;
+}
+async function submitMeeting() {
+  const btn = document.getElementById('m-submit');
+  const title = clip(document.getElementById('m-title')?.value.trim(), 200);
+  const date = document.getElementById('m-date')?.value || '';
+  const time = document.getElementById('m-time')?.value || '';
+  const minutes = Number(document.getElementById('m-dur')?.value) || 45;
+  const email = document.getElementById('m-email')?.value.trim() || '';
+  const note = clip(document.getElementById('m-note')?.value.trim(), 1500);
+  const leadId = document.getElementById('m-lead')?.value || '';
+  const meet = !!document.getElementById('m-meet')?.checked;
+  const makeTask = !!document.getElementById('m-task')?.checked;
+  if (!title) { toast('Informe o título da reunião', 'error'); return; }
+  if (!isIsoDate(date) || !date) { toast('Informe a data', 'error'); return; }
+  if (!/^\d{2}:\d{2}$/.test(time)) { toast('Informe o horário', 'error'); return; }
+  if (email && !isValidEmail(email)) { toast('E-mail do convidado inválido', 'error'); return; }
+  const lead = leadId ? S.leads.find(l => l.id === leadId) : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Criando…'; }
+  try {
+    const event = await createCalendarEvent({
+      title, date, time, minutes, email, meet, leadId,
+      description: meetingDescription(lead, note)
+    });
+    if (lead) applyMeetingToLead(lead, { date, time }, event);
+    if (makeTask) {
+      const task = sanitizeTask({
+        id: uid(),
+        leadId: lead?.id || '',
+        title: 'Reunião: ' + (lead?.name || title),
+        dueDate: date,
+        priority: 'high',
+        done: false,
+        createdAt: new Date().toISOString()
+      });
+      if (task) S.tasks.push(task);
+    }
+    if (lead || makeTask) {
+      save();
+      flushCloudSave().catch(() => {});
+    }
+    closeModal();
+    toast(event._meetFailed ? 'Reunião criada. O Google Meet não foi gerado; abra o evento na agenda para adicionar o link.' : 'Reunião criada na agenda do Google.', event._meetFailed ? '' : 'success');
+    render();
+  } catch (err) {
+    toast(err.message || 'Não foi possível criar a reunião.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Criar na agenda'; }
+  }
+}
+function eventWhen(ev) {
+  if (ev.start?.date && !ev.start?.dateTime) {
+    return new Date(ev.start.date + 'T12:00:00').toLocaleDateString('pt-BR') + ' · dia todo';
+  }
+  const d = new Date(ev.start?.dateTime || ev.start?.date);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+const CONTENT_FORMATS = {
+  reels: { label: 'Reels', bg: '#EDE9FE', color: '#6D28D9', colorId: '3' },
+  carrossel: { label: 'Carrossel', bg: '#FFEDD5', color: '#C2410C', colorId: '6' },
+  stories: { label: 'Stories', bg: '#E0F2FE', color: '#0369A1', colorId: '9' },
+  podcast: { label: 'Podcast', bg: '#D1FAE5', color: '#047857', colorId: '10' }
+};
+const CONTENT_STATUS = {
+  ideia: { label: 'Ideia', bg: '#F1F5F9', color: '#475569' },
+  roteiro: { label: 'Roteiro', bg: '#FEF3C7', color: '#92400E' },
+  gravado: { label: 'Gravado', bg: '#CCFBF1', color: '#0F766E' },
+  postado: { label: 'Postado', bg: '#DCFCE7', color: '#166534' }
+};
+const CONTENT_FILTERS = [['all','Todos'],['reels','Reels'],['carrossel','Carrossel'],['stories','Stories'],['podcast','Podcast']];
+let calMonth = new Date();
+let calFilter = 'all';
+let calGen = 0;
+let calGoogleEvents = [];
+
+function ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function nextYmd(iso) {
+  const [y, m, d] = String(iso || '').split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return ymd(new Date(y, m - 1, d + 1));
+}
+function monthGrid(anchor) {
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const start = new Date(first);
+  start.setDate(1 - first.getDay());
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+function loadContents() {
+  try {
+    const list = JSON.parse(localStorage.getItem('scrm_contents') || '[]');
+    return Array.isArray(list) ? list.filter(x => x && x.id && x.date && x.title) : [];
+  } catch (e) { return []; }
+}
+function saveContents(list) {
+  localStorage.setItem('scrm_contents', JSON.stringify(list));
+}
+function safeGcalUrl(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname;
+    if (u.protocol !== 'https:') return '';
+    if (host === 'www.google.com' || host === 'calendar.google.com' || host === 'meet.google.com') return u.href;
+  } catch (e) {}
+  return '';
+}
+function openGcalLink(url) {
+  const safe = safeGcalUrl(url);
+  if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+}
+function contentBody(item) {
+  return {
+    summary: item.title,
+    description: item.notes || '',
+    start: { date: item.date },
+    end: { date: nextYmd(item.date) },
+    colorId: (CONTENT_FORMATS[item.format] || CONTENT_FORMATS.reels).colorId,
+    extendedProperties: {
+      private: {
+        crmKind: 'content',
+        crmContentId: item.id,
+        crmFormat: item.format,
+        crmStatus: item.status
+      }
+    }
+  };
+}
+async function upsertContentEvent(item) {
+  const body = JSON.stringify(contentBody(item));
+  if (item.eventId) {
+    try {
+      return await gcalFetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(item.eventId), { method: 'PATCH', body });
+    } catch (err) {
+      if (!/404|not found/i.test(err.message || '')) throw err;
+      item.eventId = '';
+    }
+  }
+  return gcalFetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', { method: 'POST', body });
+}
+async function listRangeEvents(timeMin, timeMax) {
+  let pageToken = '';
+  const items = [];
+  for (let i = 0; i < 5; i++) {
+    const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '250', timeMin, timeMax });
+    if (pageToken) params.set('pageToken', pageToken);
+    const data = await gcalFetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?' + params.toString());
+    items.push(...(data.items || []));
+    if (!data.nextPageToken) break;
+    pageToken = data.nextPageToken;
+  }
+  return items;
+}
+function eventDates(ev) {
+  if (ev.start?.date) {
+    const dates = [];
+    let cur = ev.start.date;
+    const end = ev.end?.date || nextYmd(cur);
+    let guard = 0;
+    while (cur < end && guard < 21) {
+      dates.push(cur);
+      cur = nextYmd(cur);
+      guard++;
+    }
+    return dates.length ? dates : [ev.start.date];
+  }
+  const dt = String(ev.start?.dateTime || '').slice(0, 10);
+  return dt ? [dt] : [];
+}
+function mergeGoogleEvents(events, from, to) {
+  const local = loadContents();
+  const seen = new Set();
+  const others = [];
+  for (const ev of events) {
+    if (ev.status === 'cancelled') continue;
+    const priv = ev.extendedProperties?.private || {};
+    const date = ev.start?.date || String(ev.start?.dateTime || '').slice(0, 10);
+    if (priv.crmKind === 'content' && date) {
+      seen.add(ev.id);
+      const item = {
+        id: priv.crmContentId || ('g-' + ev.id),
+        title: clip(ev.summary || 'Sem título', 200),
+        date,
+        format: CONTENT_FORMATS[priv.crmFormat] ? priv.crmFormat : 'reels',
+        status: CONTENT_STATUS[priv.crmStatus] ? priv.crmStatus : 'ideia',
+        notes: clip(ev.description || '', 5000),
+        eventId: ev.id,
+        htmlLink: ev.htmlLink || ''
+      };
+      const idx = local.findIndex(x => x.id === item.id || x.eventId === ev.id);
+      if (idx >= 0) local[idx] = { ...local[idx], ...item };
+      else local.push(item);
+    } else {
+      others.push(ev);
+    }
+  }
+  const kept = local.filter(item => {
+    if (!item.eventId) return true;
+    if (item.date < from || item.date > to) return true;
+    return seen.has(item.eventId);
+  });
+  saveContents(kept);
+  calGoogleEvents = others;
+}
+async function pushUnsyncedContents() {
+  const list = loadContents();
+  for (const item of list) {
+    if (item.eventId) continue;
+    const ev = await upsertContentEvent(item);
+    item.eventId = ev.id;
+    item.htmlLink = ev.htmlLink || '';
+    saveContents(list);
+  }
+}
+function contentCard(item) {
+  const fmt = CONTENT_FORMATS[item.format] || CONTENT_FORMATS.reels;
+  const st = CONTENT_STATUS[item.status] || CONTENT_STATUS.ideia;
+  return `<button type="button" class="cal-card" data-action="open-content" data-id="${escAttr(item.id)}">
+    <div class="cal-card-title">${escHtml(item.title)}</div>
+    <div><span class="pill" style="background:${fmt.bg};color:${fmt.color}">${fmt.label}</span><span class="pill" style="background:${st.bg};color:${st.color}">${st.label}</span></div>
+  </button>`;
+}
+function compromissoCard(ev) {
+  const when = ev.start?.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Dia todo';
+  const url = safeGcalUrl(ev.htmlLink || ev.hangoutLink || '');
+  return `<button type="button" class="cal-card" data-action="open-gcal" data-url="${escAttr(url)}">
+    <div class="cal-card-title">${escHtml(ev.summary || 'Compromisso')}</div>
+    <div><span class="pill" style="background:#E6F6FF;color:#006eb3">${escHtml(when)}</span></div>
+  </button>`;
+}
+function paintCalendar() {
+  const board = document.getElementById('cal-board');
+  const label = document.getElementById('cal-label');
+  const filters = document.getElementById('cal-filters');
+  if (!board) return;
+  if (label) label.textContent = calMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  if (filters) {
+    filters.innerHTML = CONTENT_FILTERS.map(([id, name]) => `<button type="button" class="cal-chip ${calFilter === id ? 'on' : ''}" data-action="cal-filter" data-format="${id}">${name}</button>`).join('');
+  }
+  const cells = monthGrid(calMonth);
+  const today = ymd(new Date());
+  const month = calMonth.getMonth();
+  const contents = loadContents().filter(item => calFilter === 'all' || item.format === calFilter);
+  const byDate = {};
+  contents.forEach(item => {
+    if (!byDate[item.date]) byDate[item.date] = [];
+    byDate[item.date].push(contentCard(item));
+  });
+  if (calFilter === 'all') {
+    calGoogleEvents.forEach(ev => {
+      eventDates(ev).forEach(date => {
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(compromissoCard(ev));
+      });
+    });
+  }
+  const dows = ['dom','seg','ter','qua','qui','sex','sáb'];
+  board.innerHTML = `<div class="cal-grid">
+    ${dows.map(d => `<div class="cal-dow">${d}</div>`).join('')}
+    ${cells.map(d => {
+      const key = ymd(d);
+      const cards = byDate[key] || [];
+      return `<div class="cal-day ${d.getMonth() === month ? '' : 'out'}" data-action="open-content" data-date="${key}">
+        <div class="cal-num ${key === today ? 'today' : ''}">${d.getDate()}</div>
+        ${cards.join('')}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function vAgenda() {
+  const connected = gcalConnected();
+  const configured = !!googleClientId();
+  const syncLine = configured
+    ? (connected ? 'Sincronizado com o Google Agenda de ' + escHtml(gcalEmail || 'sua conta') + '.' : 'Conecte o Google Agenda para espelhar estes cards na sua conta.')
+    : 'O calendário já funciona neste navegador. Para sincronizar, cole o Client ID do Google em config.js.';
+  return `
+  <div class="cal-top">
+    <div class="cal-page-title">Conteúdos Instagram</div>
+    <p class="text-muted">Stories, carrosséis, reels e podcast. Abra o card para ver o roteiro e mudar o status. ${syncLine}</p>
+  </div>
+  <div class="cal-toolbar">
+    <div class="cal-nav">
+      <button type="button" class="btn btn-secondary btn-sm" data-action="cal-today">Hoje</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-action="cal-shift" data-dir="-1" aria-label="Mês anterior">‹</button>
+      <div id="cal-label" class="cal-label"></div>
+      <button type="button" class="btn btn-secondary btn-sm" data-action="cal-shift" data-dir="1" aria-label="Próximo mês">›</button>
+    </div>
+    <div class="cal-filters" id="cal-filters"></div>
+    <div class="cal-actions">
+      ${configured ? (connected
+        ? '<button type="button" class="btn btn-secondary btn-sm" data-action="google-disconnect">Desconectar</button>'
+        : '<button type="button" class="btn btn-secondary btn-sm" data-action="google-connect">Conectar Google Agenda</button>') : ''}
+      <button type="button" class="btn btn-secondary btn-sm" data-action="cal-sync">Sincronizar</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-action="open-meeting">Nova reunião</button>
+      <button type="button" class="btn btn-primary btn-sm" data-action="open-content">Novo conteúdo</button>
+    </div>
+  </div>
+  <div id="cal-status" class="text-muted" style="min-height:18px;margin-bottom:8px"></div>
+  <div class="card cal-scroll" style="padding:0">
+    <div id="cal-board"></div>
+  </div>`;
+}
+function initAgenda() {
+  refreshCalendar();
+}
+function shiftMonth(dir) {
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + dir, 1);
+  refreshCalendar();
+}
+async function refreshCalendar() {
+  const gen = ++calGen;
+  paintCalendar();
+  const status = document.getElementById('cal-status');
+  if (!gcalConnected()) {
+    if (status) status.textContent = googleClientId() ? 'Salvo neste navegador. Conecte o Google Agenda para sincronizar.' : '';
+    return;
+  }
+  if (status) status.textContent = 'Sincronizando com o Google Agenda…';
+  try {
+    const cells = monthGrid(calMonth);
+    const start = new Date(cells[0].getFullYear(), cells[0].getMonth(), cells[0].getDate());
+    const last = cells[cells.length - 1];
+    const end = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1);
+    const events = await listRangeEvents(start.toISOString(), end.toISOString());
+    if (gen !== calGen || S.view !== 'agenda') return;
+    mergeGoogleEvents(events, ymd(cells[0]), ymd(last));
+    await pushUnsyncedContents();
+    if (gen !== calGen || S.view !== 'agenda') return;
+    paintCalendar();
+    const fresh = document.getElementById('cal-status');
+    if (fresh) fresh.textContent = 'Sincronizado com o Google Agenda' + (gcalEmail ? ' · ' + gcalEmail : '') + '.';
+  } catch (err) {
+    const fresh = document.getElementById('cal-status');
+    if (fresh && gen === calGen) fresh.textContent = err.message || 'Não foi possível sincronizar.';
+  }
+}
+function openContentModal(id, date) {
+  const item = id ? loadContents().find(x => x.id === id) : null;
+  const when = item?.date || (isIsoDate(date) && date ? date : ymd(new Date()));
+  const formatOpts = Object.entries(CONTENT_FORMATS).map(([k, v]) => `<option value="${k}" ${item?.format === k ? 'selected' : ''}>${v.label}</option>`).join('');
+  const statusOpts = Object.entries(CONTENT_STATUS).map(([k, v]) => `<option value="${k}" ${(item?.status || 'ideia') === k ? 'selected' : ''}>${v.label}</option>`).join('');
+  document.getElementById('modal-title').textContent = item ? 'Editar conteúdo' : 'Novo conteúdo';
+  document.getElementById('modal-body').innerHTML = `
+  <input id="c-id" type="hidden" value="${escAttr(item?.id || '')}">
+  <div class="form-grid">
+    <div class="form-group form-full"><label for="c-title">Título *</label><input id="c-title" type="text" maxlength="200" value="${escAttr(item?.title || '')}" placeholder="Ex: Dia dos Animais"></div>
+    <div class="form-group"><label for="c-date">Data *</label><input id="c-date" type="date" value="${escAttr(when)}"></div>
+    <div class="form-group"><label for="c-format">Formato</label><select id="c-format">${formatOpts}</select></div>
+    <div class="form-group"><label for="c-status">Status</label><select id="c-status">${statusOpts}</select></div>
+    <div class="form-group form-full"><label for="c-notes">Roteiro</label><textarea id="c-notes" maxlength="5000" placeholder="Gancho, cenas, legenda, checklist">${escHtml(item?.notes || '')}</textarea></div>
+  </div>
+  ${item?.htmlLink && safeGcalUrl(item.htmlLink) ? `<p style="margin-top:12px"><a href="${escAttr(safeGcalUrl(item.htmlLink))}" target="_blank" rel="noopener noreferrer">Abrir no Google Agenda</a></p>` : ''}`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button type="button" class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+    ${item ? `<button type="button" class="btn btn-danger btn-sm" data-action="delete-content" data-id="${escAttr(item.id)}">Excluir</button>` : ''}
+    <button type="button" class="btn btn-primary" id="c-submit" data-action="save-content">Salvar</button>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('the-modal').scrollTop = 0;
+}
+async function saveContent() {
+  const btn = document.getElementById('c-submit');
+  const title = clip(document.getElementById('c-title')?.value.trim(), 200);
+  const date = document.getElementById('c-date')?.value || '';
+  const format = document.getElementById('c-format')?.value || 'reels';
+  const status = document.getElementById('c-status')?.value || 'ideia';
+  const notes = clip(document.getElementById('c-notes')?.value.trim(), 5000);
+  const existingId = document.getElementById('c-id')?.value || '';
+  if (!title) { toast('Informe o título', 'error'); return; }
+  if (!isIsoDate(date) || !date || !CONTENT_FORMATS[format] || !CONTENT_STATUS[status]) { toast('Data ou formato inválido', 'error'); return; }
+  const list = loadContents();
+  let item = existingId ? list.find(x => x.id === existingId) : null;
+  if (!item) {
+    item = { id: uid(), eventId: '', htmlLink: '' };
+    list.push(item);
+  }
+  Object.assign(item, { title, date, format, status, notes });
+  saveContents(list);
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  try {
+    if (gcalConnected()) {
+      const ev = await upsertContentEvent(item);
+      item.eventId = ev.id;
+      item.htmlLink = ev.htmlLink || '';
+      saveContents(list);
+      toast('Conteúdo sincronizado com o Google Agenda.', 'success');
+    } else {
+      toast('Conteúdo salvo. Conecte o Google Agenda para sincronizar.', 'success');
+    }
+    closeModal();
+    if (S.view === 'agenda') paintCalendar();
+  } catch (err) {
+    toast(err.message || 'Salvo aqui, mas o Google Agenda não atualizou.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
+    if (S.view === 'agenda') paintCalendar();
+  }
+}
+async function deleteContent(id) {
+  const list = loadContents();
+  const item = list.find(x => x.id === id);
+  if (!item) return;
+  if (!confirm('Excluir este conteúdo? Se ele estiver no Google Agenda, o evento também sai.')) return;
+  if (item.eventId && gcalConnected()) {
+    try {
+      await gcalFetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(item.eventId), { method: 'DELETE' });
+    } catch (err) {
+      if (!/404|not found/i.test(err.message || '')) {
+        toast(err.message || 'Não foi possível excluir no Google Agenda.', 'error');
+        return;
+      }
+    }
+  }
+  saveContents(list.filter(x => x.id !== id));
+  closeModal();
+  toast('Conteúdo excluído.', 'success');
+  if (S.view === 'agenda') paintCalendar();
+}
+async function onGoogleConnect() {
+  try {
+    await connectGoogle();
+    toast(gcalEmail ? 'Conectado como ' + gcalEmail + '.' : 'Google Agenda conectado.', 'success');
+    if (S.view === 'agenda') render();
+    else navigate('agenda');
+  } catch (err) {
+    toast(err.message || 'Não foi possível conectar ao Google.', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════
-const VIEWS = ['dashboard','leads','pipeline','clients','tasks','import','reports','backup','users'];
-const TITLES = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline Kanban', clients:'Clientes', tasks:'Tarefas', import:'Importar Leads', reports:'Relatórios', backup:'Backup & Segurança', users:'Usuários' };
+const VIEWS = ['dashboard','leads','pipeline','clients','tasks','agenda','import','reports','backup','users'];
+const TITLES = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline Kanban', clients:'Clientes', tasks:'Tarefas', agenda:'Conteúdos', import:'Importar Leads', reports:'Relatórios', backup:'Backup & Segurança', users:'Usuários' };
 
 function navigate(v) {
   if (v === 'users' && !isAdmin()) v = 'dashboard';
@@ -868,6 +1520,7 @@ function render() {
   else if (S.view==='pipeline') { el.innerHTML = vPipeline(); initDnD(); }
   else if (S.view==='clients')  el.innerHTML = vClients();
   else if (S.view==='tasks')    el.innerHTML = vTasks();
+  else if (S.view==='agenda')   { el.innerHTML = vAgenda(); initAgenda(); }
   else if (S.view==='import')   { el.innerHTML = vImport(); initImport(); }
   else if (S.view==='reports')  { el.innerHTML = vReports(); _chartTimer = setTimeout(initCharts, 150); }
   else if (S.view==='backup')   el.innerHTML = vBackup();
@@ -891,32 +1544,32 @@ function vDashboard() {
 
   return `
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${total}</div><div class="stat-label">Total de Leads</div></div>
-    <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value" style="color:#009eff">${active}</div><div class="stat-label">Leads Ativos</div></div>
-    <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value" style="color:#10B981">${closed}</div><div class="stat-label">Clientes Fechados</div></div>
-    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" style="color:#10B981;font-size:21px">R$ ${revenue.toLocaleString('pt-BR')}</div><div class="stat-label">Receita Total</div></div>
-    <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-value" style="color:#F59E0B">${rate}%</div><div class="stat-label">Taxa de Conversão</div><div class="progress-bar"><div class="progress-fill" style="width:${rate}%"></div></div></div>
-    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" style="color:#3B82F6">${pending}</div><div class="stat-label">Tarefas Pendentes</div></div>
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total de Leads</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#009eff">${active}</div><div class="stat-label">Leads Ativos</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#10B981">${closed}</div><div class="stat-label">Clientes Fechados</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#10B981;font-size:21px">R$ ${revenue.toLocaleString('pt-BR')}</div><div class="stat-label">Receita Total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#F59E0B">${rate}%</div><div class="stat-label">Taxa de Conversão</div><div class="progress-bar"><div class="progress-fill" style="width:${rate}%"></div></div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#3B82F6">${pending}</div><div class="stat-label">Tarefas Pendentes</div></div>
   </div>
 
   <div class="split-2">
     <div class="card">
-      <div style="font-weight:700;margin-bottom:14px;font-size:14px">📊 Pipeline por Estágio</div>
+      <div style="font-weight:700;margin-bottom:14px;font-size:14px">Pipeline por Estágio</div>
       ${STAGES.map(s=>{
         const n = S.leads.filter(l=>l.stage===s.id).length;
         const p = total ? Math.round(n/total*100) : 0;
         return `<div style="margin-bottom:9px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>${s.icon} ${s.name}</span><span style="font-weight:700">${n}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>${s.name}</span><span style="font-weight:700">${n}</span></div>
           <div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${s.color}"></div></div>
         </div>`;
       }).join('')}
     </div>
     <div class="card">
-      <div style="font-weight:700;margin-bottom:14px;font-size:14px">🕐 Leads Recentes</div>
+      <div style="font-weight:700;margin-bottom:14px;font-size:14px">Leads Recentes</div>
       ${recent.map(l=>{
         const sg = stage(l.stage);
         return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9;cursor:pointer" data-action="open-lead" data-id="${escAttr(l.id)}">
-          <div style="width:32px;height:32px;border-radius:50%;background:${sg.color}22;display:flex;align-items:center;justify-content:center;font-size:16px">${sg.icon}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:${sg.color}22;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${sg.color}">${escHtml((l.name||'?').trim().charAt(0).toUpperCase())}</div>
           <div style="flex:1"><div style="font-weight:600;font-size:13px">${escHtml(l.name)}</div><div style="font-size:11px;color:#009eff">${escHtml(l.instagram||'')}</div></div>
           <span class="badge ${QC[l.quality]||'badge-D'}">${l.quality||'?'}</span>
         </div>`;
@@ -926,7 +1579,7 @@ function vDashboard() {
   </div>
 
   <div class="card" style="margin-bottom:20px">
-    <div style="font-weight:700;margin-bottom:14px;font-size:14px">🛠 Serviços Fechados</div>
+    <div style="font-weight:700;margin-bottom:14px;font-size:14px">Serviços Fechados</div>
     ${(()=>{
       const cls = S.leads.filter(l=>l.sold||l.stage==='closed');
       if (!cls.length) return '<div class="text-muted" style="text-align:center;padding:12px 0">Nenhum cliente fechado ainda</div>';
@@ -952,12 +1605,13 @@ function vDashboard() {
   </div>
 
   <div class="card">
-    <div style="font-weight:700;margin-bottom:14px;font-size:14px">⚡ Ações Rápidas</div>
+    <div style="font-weight:700;margin-bottom:14px;font-size:14px">Ações Rápidas</div>
     <div class="quick-actions">
-      <div class="quick-action" data-action="open-lead"><span style="font-size:22px">＋</span><div><div style="font-weight:700;font-size:12.5px">Novo Lead</div><div style="font-size:11px;color:#94A3B8">Adicionar</div></div></div>
-      <div class="quick-action" data-action="navigate" data-view="import"><span style="font-size:22px">📥</span><div><div style="font-weight:700;font-size:12.5px">Importar CSV</div><div style="font-size:11px;color:#94A3B8">Da planilha</div></div></div>
-      <div class="quick-action" data-action="navigate" data-view="pipeline"><span style="font-size:22px">📋</span><div><div style="font-weight:700;font-size:12.5px">Pipeline</div><div style="font-size:11px;color:#94A3B8">Kanban visual</div></div></div>
-      <div class="quick-action" data-action="navigate" data-view="reports"><span style="font-size:22px">📊</span><div><div style="font-weight:700;font-size:12.5px">Relatórios</div><div style="font-size:11px;color:#94A3B8">Ver análises</div></div></div>
+      <div class="quick-action" data-action="open-lead"><div><div style="font-weight:700;font-size:12.5px">Novo Lead</div><div style="font-size:11px;color:#94A3B8">Adicionar</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="import"><div><div style="font-weight:700;font-size:12.5px">Importar CSV</div><div style="font-size:11px;color:#94A3B8">Da planilha</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="pipeline"><div><div style="font-weight:700;font-size:12.5px">Pipeline</div><div style="font-size:11px;color:#94A3B8">Kanban visual</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="reports"><div><div style="font-weight:700;font-size:12.5px">Relatórios</div><div style="font-size:11px;color:#94A3B8">Ver análises</div></div></div>
+      <div class="quick-action" data-action="navigate" data-view="agenda"><div><div style="font-weight:700;font-size:12.5px">Conteúdos</div><div style="font-size:11px;color:#94A3B8">Calendário do mês</div></div></div>
     </div>
   </div>`;
 }
@@ -987,26 +1641,26 @@ function vLeads() {
     <input class="search-input" type="text" placeholder="Buscar por nome, @instagram ou empresa…" value="${escAttr(S.f.q)}" data-filter="q">
     <select class="filter-select" data-filter="stage">
       <option value="">Todos os estágios</option>
-      ${STAGES.map(s=>`<option value="${s.id}" ${S.f.stage===s.id?'selected':''}>${s.icon} ${s.name}</option>`).join('')}
+      ${STAGES.map(s=>`<option value="${s.id}" ${S.f.stage===s.id?'selected':''}>${s.name}</option>`).join('')}
     </select>
     <select class="filter-select" data-filter="quality">
       <option value="">Qualidade</option>
-      <option value="A" ${S.f.quality==='A'?'selected':''}>🔥 Hot (A)</option>
-      <option value="B" ${S.f.quality==='B'?'selected':''}>😊 Warm (B)</option>
-      <option value="C" ${S.f.quality==='C'?'selected':''}>❄️ Cold (C)</option>
-      <option value="D" ${S.f.quality==='D'?'selected':''}>🧊 Frozen (D)</option>
+      <option value="A" ${S.f.quality==='A'?'selected':''}>Hot (A)</option>
+      <option value="B" ${S.f.quality==='B'?'selected':''}>Warm (B)</option>
+      <option value="C" ${S.f.quality==='C'?'selected':''}>Cold (C)</option>
+      <option value="D" ${S.f.quality==='D'?'selected':''}>Frozen (D)</option>
     </select>
     <select class="filter-select" data-filter="responded">
       <option value="">Respondeu?</option>
-      <option value="true" ${S.f.responded==='true'?'selected':''}>✅ Sim</option>
-      <option value="false" ${S.f.responded==='false'?'selected':''}>❌ Não</option>
+      <option value="true" ${S.f.responded==='true'?'selected':''}>Sim</option>
+      <option value="false" ${S.f.responded==='false'?'selected':''}>Não</option>
     </select>
     <select class="filter-select" data-filter="sold">
       <option value="">Vendeu?</option>
-      <option value="true" ${S.f.sold==='true'?'selected':''}>✅ Sim</option>
-      <option value="false" ${S.f.sold==='false'?'selected':''}>❌ Não</option>
+      <option value="true" ${S.f.sold==='true'?'selected':''}>Sim</option>
+      <option value="false" ${S.f.sold==='false'?'selected':''}>Não</option>
     </select>
-    <button class="btn btn-secondary btn-sm" type="button" data-action="clear-filters">✕ Limpar</button>
+    <button class="btn btn-secondary btn-sm" type="button" data-action="clear-filters">Limpar</button>
     <span class="text-muted" style="white-space:nowrap">${rows.length} lead${rows.length!==1?'s':''}</span>
   </div>
 
@@ -1015,7 +1669,7 @@ function vLeads() {
       <table>
         <thead><tr>
           <th>Nome / @Instagram</th><th>Telefone</th><th>Empresa</th><th>Nicho</th>
-          <th>🔍 De onde veio</th><th>Serviço</th><th>Estágio</th><th>Qualidade</th><th>1º Contato</th>
+          <th>De onde veio</th><th>Serviço</th><th>Estágio</th><th>Qualidade</th><th>1º Contato</th>
           <th>Reunião</th><th>Proposta</th><th>Respondeu</th><th>Resp. Proposta</th>
           <th>Vendeu</th><th>Valor</th><th>Objeção</th>
           <th>Próxima Ação</th><th>Ações</th>
@@ -1025,25 +1679,25 @@ function vLeads() {
           const sg = stage(l.stage);
           return `<tr>
             <td><div style="font-weight:700;font-size:13px">${escHtml(l.name)}</div><div style="color:#009eff;font-size:11px">${escHtml(l.instagram||'—')}</div></td>
-            <td style="font-size:12px;color:#374151;white-space:nowrap">${(() => { const wa = waHref(l.phone); return wa ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener noreferrer" style="color:#10B981;text-decoration:none" title="Abrir WhatsApp">📱 ${escHtml(l.phone)}</a>` : '—'; })()}</td>
+            <td style="font-size:12px;color:#374151;white-space:nowrap">${(() => { const wa = waHref(l.phone); return wa ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener noreferrer" style="color:#10B981;text-decoration:none" title="Abrir WhatsApp">${escHtml(l.phone)}</a>` : '—'; })()}</td>
             <td style="font-size:12.5px">${escHtml(l.company||'—')}</td>
             <td><span class="tag">${escHtml(l.niche||'—')}</span></td>
             <td style="font-size:12px;color:#0369A1;font-weight:600">${escHtml(l.source||'—')}</td>
             <td style="font-size:12px;color:#006eb3;font-weight:600">${escHtml(l.serviceType||'—')}</td>
-            <td><span class="badge" style="background:${sg.color}20;color:${sg.color};font-size:10px">${sg.icon} ${sg.name}</span></td>
+            <td><span class="badge" style="background:${sg.color}20;color:${sg.color};font-size:10px">${sg.name}</span></td>
             <td><span class="badge ${QC[l.quality]||'badge-D'}">${QL[l.quality]||'—'}</span></td>
             <td style="font-size:12px">${fmt(l.firstContactDate)}</td>
             <td style="font-size:12px">${fmt(l.meetingDate)}</td>
             <td style="font-size:12px">${fmt(l.proposalDate)}</td>
-            <td><span class="badge ${l.responded?'badge-yes':'badge-no'}">${l.responded?'✅ Sim':'❌ Não'}</span></td>
-            <td><span class="badge ${l.respondedAfterProposal?'badge-yes':'badge-no'}">${l.respondedAfterProposal?'✅ Sim':'❌ Não'}</span></td>
-            <td><span class="badge ${l.sold?'badge-yes':'badge-no'}">${l.sold?'✅ Sim':'❌ Não'}</span></td>
+            <td><span class="badge ${l.responded?'badge-yes':'badge-no'}">${l.responded?'Sim':'Não'}</span></td>
+            <td><span class="badge ${l.respondedAfterProposal?'badge-yes':'badge-no'}">${l.respondedAfterProposal?'Sim':'Não'}</span></td>
+            <td><span class="badge ${l.sold?'badge-yes':'badge-no'}">${l.sold?'Sim':'Não'}</span></td>
             <td style="font-size:12px;font-weight:700;color:${l.contractValue?'#10B981':'#94A3B8'}">${fmtR(l.contractValue)}</td>
             <td style="font-size:11.5px;color:#64748B;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escAttr(l.objections||'')}">${escHtml(l.objections||'—')}</td>
             <td style="font-size:11.5px;color:#64748B;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escAttr(l.nextAction||'')}">${escHtml(l.nextAction||'—')}</td>
-            <td><div style="display:flex;gap:4px"><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">✏️</button><button class="action-btn action-delete" data-action="delete-lead" data-id="${escAttr(l.id)}">🗑</button></div></td>
+            <td><div style="display:flex;gap:4px"><button class="action-btn action-edit" data-action="open-meeting" data-id="${escAttr(l.id)}">Reunião</button><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">Editar</button><button class="action-btn action-delete" data-action="delete-lead" data-id="${escAttr(l.id)}">Excluir</button></div></td>
           </tr>`;
-        }).join('') : `<tr><td colspan="14"><div class="empty-state"><div class="empty-state-icon">🔍</div><h3>Nenhum lead encontrado</h3><button class="btn btn-primary" style="margin-top:12px" type="button" data-action="open-lead">+ Novo Lead</button></div></td></tr>`}
+        }).join('') : `<tr><td colspan="14"><div class="empty-state"><h3>Nenhum lead encontrado</h3><button class="btn btn-primary" style="margin-top:12px" type="button" data-action="open-lead">+ Novo Lead</button></div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1060,10 +1714,10 @@ function vPipeline() {
         const val = leads.reduce((s,l)=>s+(+l.contractValue||0),0);
         return `<div class="kanban-col" data-stage="${sg.id}" data-drop-stage="${escAttr(sg.id)}">
           <div class="kanban-header" style="background:${sg.color}">
-            <div class="kanban-header-left">${sg.icon} <span>${sg.name}</span></div>
+            <div class="kanban-header-left"><span>${sg.name}</span></div>
             <span class="kanban-count">${leads.length}</span>
           </div>
-          ${val>0?`<div style="background:${sg.color}18;padding:3px 10px;font-size:10.5px;color:${sg.color};font-weight:700">💰 R$ ${val.toLocaleString('pt-BR')}</div>`:''}
+          ${val>0?`<div style="background:${sg.color}18;padding:3px 10px;font-size:10.5px;color:${sg.color};font-weight:700">R$ ${val.toLocaleString('pt-BR')}</div>`:''}
           <div class="kanban-cards" id="kc-${sg.id}">
             ${leads.map(l=>kcCard(l,sg)).join('')}
             ${!leads.length?`<div style="text-align:center;padding:16px;color:#CBD5E1;font-size:11px">Arraste leads aqui</div>`:''}
@@ -1120,13 +1774,13 @@ function vClients() {
   const avg = cls.length ? Math.round(rev/cls.length) : 0;
   return `
   <div class="stats-grid stats-grid-3">
-    <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value" style="color:#10B981">${cls.length}</div><div class="stat-label">Clientes Ativos</div></div>
-    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" style="color:#10B981;font-size:21px">R$ ${rev.toLocaleString('pt-BR')}</div><div class="stat-label">Receita Mensal Total</div></div>
-    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value" style="color:#009eff;font-size:21px">R$ ${avg.toLocaleString('pt-BR')}</div><div class="stat-label">Ticket Médio</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#10B981">${cls.length}</div><div class="stat-label">Clientes Ativos</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#10B981;font-size:21px">R$ ${rev.toLocaleString('pt-BR')}</div><div class="stat-label">Receita Mensal Total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#009eff;font-size:21px">R$ ${avg.toLocaleString('pt-BR')}</div><div class="stat-label">Ticket Médio</div></div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     ${cls.length ? `<div class="table-wrap"><table><thead><tr>
-      <th>Cliente</th><th>Empresa</th><th>Nicho</th><th>🔍 De onde veio</th><th>🛠 Tipo de Serviço</th><th>1º Contato</th><th>Proposta</th><th>Valor/mês</th><th>Qualidade</th><th>Observações</th><th>Ações</th>
+      <th>Cliente</th><th>Empresa</th><th>Nicho</th><th>De onde veio</th><th>Tipo de Serviço</th><th>1º Contato</th><th>Proposta</th><th>Valor/mês</th><th>Qualidade</th><th>Observações</th><th>Ações</th>
     </tr></thead><tbody>
       ${cls.map(l=>`<tr>
         <td><div style="font-weight:700">${escHtml(l.name)}</div><div style="color:#009eff;font-size:11px">${escHtml(l.instagram||'—')}</div></td>
@@ -1139,9 +1793,9 @@ function vClients() {
         <td style="font-weight:700;color:#10B981">${fmtR(l.contractValue)}</td>
         <td><span class="badge ${QC[l.quality]||'badge-D'}">${QL[l.quality]||'—'}</span></td>
         <td style="font-size:11.5px;color:#64748B;max-width:180px">${escHtml(l.notes||'—')}</td>
-        <td><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">✏️</button></td>
+        <td><div style="display:flex;gap:4px"><button class="action-btn action-edit" data-action="open-meeting" data-id="${escAttr(l.id)}">Reunião</button><button class="action-btn action-edit" data-action="open-lead" data-id="${escAttr(l.id)}">Editar</button></div></td>
       </tr>`).join('')}
-    </tbody></table></div>` : `<div class="empty-state"><div class="empty-state-icon">🏆</div><h3>Nenhum cliente ainda</h3><p class="text-muted">Leads em "Cliente Fechado" ou "Cliente Antigo" aparecem aqui</p></div>`}
+    </tbody></table></div>` : `<div class="empty-state"><h3>Nenhum cliente ainda</h3><p class="text-muted">Leads em "Cliente Fechado" ou "Cliente Antigo" aparecem aqui</p></div>`}
   </div>`;
 }
 
@@ -1159,11 +1813,11 @@ function vTasks() {
       <div class="task-check ${t.done?'done':''}" data-action="toggle-task" data-id="${escAttr(t.id)}">${t.done?'✓':''}</div>
       <div style="flex:1">
         <div style="font-weight:600;font-size:13.5px;${t.done?'text-decoration:line-through':''}">${escHtml(t.title)}</div>
-        ${lead?`<div style="font-size:11.5px;color:#009eff">👤 ${escHtml(lead.name)} (${escHtml(lead.instagram||'')})</div>`:''}
-        ${t.dueDate?`<div style="font-size:11.5px;color:#64748B">📅 ${fmt(t.dueDate)}</div>`:''}
+        ${lead?`<div style="font-size:11.5px;color:#009eff">${escHtml(lead.name)} (${escHtml(lead.instagram||'')})</div>`:''}
+        ${t.dueDate?`<div style="font-size:11.5px;color:#64748B">${fmt(t.dueDate)}</div>`:''}
       </div>
       <span style="font-size:10.5px;font-weight:700;color:${PC[t.priority]};background:${PC[t.priority]}18;padding:2px 8px;border-radius:20px">${PL[t.priority]||'Normal'}</span>
-      <button class="action-btn action-delete" data-action="delete-task" data-id="${escAttr(t.id)}" style="margin-left:6px">🗑</button>
+      <button class="action-btn action-delete" data-action="delete-task" data-id="${escAttr(t.id)}" style="margin-left:6px">Excluir</button>
     </div>`;
   }
   return `
@@ -1172,10 +1826,10 @@ function vTasks() {
     <button class="btn btn-primary" type="button" data-action="open-task">+ Nova Tarefa</button>
   </div>
   <div class="card" style="margin-bottom:16px;padding:0">
-    <div style="padding:14px 16px;font-weight:700;border-bottom:1px solid #F1F5F9">📋 Pendentes (${pend.length})</div>
-    ${pend.length ? pend.map(tRow).join('') : '<div class="text-muted" style="padding:20px;text-align:center">Nenhuma tarefa pendente 🎉</div>'}
+    <div style="padding:14px 16px;font-weight:700;border-bottom:1px solid #F1F5F9">Pendentes (${pend.length})</div>
+    ${pend.length ? pend.map(tRow).join('') : '<div class="text-muted" style="padding:20px;text-align:center">Nenhuma tarefa pendente</div>'}
   </div>
-  ${done.length?`<div class="card" style="padding:0"><div style="padding:14px 16px;font-weight:700;color:#94A3B8;border-bottom:1px solid #F1F5F9">✅ Concluídas (${done.length})</div>${done.map(tRow).join('')}</div>`:''} `;
+  ${done.length?`<div class="card" style="padding:0"><div style="padding:14px 16px;font-weight:700;color:#94A3B8;border-bottom:1px solid #F1F5F9">Concluídas (${done.length})</div>${done.map(tRow).join('')}</div>`:''} `;
 }
 
 function toggleTask(id) { const t=S.tasks.find(x=>x.id===id); if(t){t.done=!t.done;save();render();flushCloudSave().catch(()=>{});} }
@@ -1196,39 +1850,38 @@ function vImport() {
   <div class="split-2">
     <div>
       <div class="card">
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">📥 Importar via CSV</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Importar via CSV</div>
         <div class="text-muted" style="margin-bottom:18px;font-size:13px">Faça upload de uma planilha CSV com seus leads</div>
         <div class="import-zone" id="import-zone" data-action="pick-csv">
-          <div style="font-size:36px;margin-bottom:10px">📄</div>
           <div style="font-weight:600;margin-bottom:3px">Clique ou arraste o arquivo aqui</div>
           <div class="text-muted" style="font-size:12.5px">Aceita .CSV e .XLSX</div>
         </div>
         <input type="file" id="csv-file" accept=".csv" style="display:none" >
         <div style="margin-top:16px;padding:12px;background:#F8FAFC;border-radius:8px">
-          <div style="font-weight:600;font-size:12px;margin-bottom:6px">📋 Colunas do CSV:</div>
+          <div style="font-weight:600;font-size:12px;margin-bottom:6px">Colunas do CSV:</div>
           <code style="font-size:11px;color:#64748B;line-height:1.9">nome, instagram, empresa, nicho, estagio, qualidade,<br>primeiro_contato, reuniao, proposta, respondeu,<br>vendeu, valor, proxima_acao, objecao, observacoes</code>
         </div>
-        <button class="btn btn-secondary" style="margin-top:10px;width:100%" type="button" data-action="download-template">⬇ Baixar Template CSV</button>
+        <button class="btn btn-secondary" style="margin-top:10px;width:100%" type="button" data-action="download-template">Baixar Template CSV</button>
       </div>
     </div>
     <div>
       <div class="card">
-        <div style="font-weight:700;font-size:15px;margin-bottom:10px">🔗 Conexão Automática</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:10px">Conexão Automática</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div style="padding:12px;background:#E6F6FF;border-radius:8px;border-left:3px solid #009eff">
-            <div style="font-weight:700;font-size:12.5px;color:#006eb3;margin-bottom:3px">📊 Google Forms → CSV</div>
+            <div style="font-weight:700;font-size:12.5px;color:#006eb3;margin-bottom:3px">Google Forms → CSV</div>
             <div style="font-size:12px;color:#007acc">Crie um form de prospecção → resposta vai para Google Sheets → exporte como CSV → importe aqui</div>
           </div>
           <div style="padding:12px;background:#DBEAFE;border-radius:8px;border-left:3px solid #3B82F6">
-            <div style="font-weight:700;font-size:12.5px;color:#1E40AF;margin-bottom:3px">âš¡ Make (Integromat) ou Zapier</div>
+            <div style="font-weight:700;font-size:12.5px;color:#1E40AF;margin-bottom:3px">Make (Integromat) ou Zapier</div>
             <div style="font-size:12px;color:#1D4ED8">Conecte formulários, DMs ou planilhas → gere CSVs automaticamente para importar aqui</div>
           </div>
           <div style="padding:12px;background:#DCFCE7;border-radius:8px;border-left:3px solid #10B981">
-            <div style="font-weight:700;font-size:12.5px;color:#166534;margin-bottom:3px">📱 Planilha de Prospecção</div>
+            <div style="font-weight:700;font-size:12.5px;color:#166534;margin-bottom:3px">Planilha de Prospecção</div>
             <div style="font-size:12px;color:#15803D">Mantenha um Google Sheets de prospecção e exporte CSV semanalmente para importar aqui</div>
           </div>
           <div style="padding:12px;background:#FEF3C7;border-radius:8px;border-left:3px solid #F59E0B">
-            <div style="font-weight:700;font-size:12.5px;color:#92400E;margin-bottom:3px">🤖 Peça pra mim automatizar!</div>
+            <div style="font-weight:700;font-size:12.5px;color:#92400E;margin-bottom:3px">Peça pra mim automatizar!</div>
             <div style="font-size:12px;color:#B45309">Me peça para criar um script que busca perfis do Instagram ou lê sua planilha e preenche o CSV automaticamente para importar aqui</div>
           </div>
         </div>
@@ -1236,11 +1889,11 @@ function vImport() {
     </div>
   </div>
   <div class="card" id="import-preview" style="display:none;margin-top:18px">
-    <div style="font-weight:700;margin-bottom:14px">👀 Preview da Importação</div>
+    <div style="font-weight:700;margin-bottom:14px">Preview da Importação</div>
     <div id="preview-body"></div>
     <div class="preview-actions">
-      <button class="btn btn-primary" type="button" data-action="confirm-import">✅ Confirmar Importação</button>
-      <button class="btn btn-secondary" type="button" data-action="cancel-import">✕ Cancelar</button>
+      <button class="btn btn-primary" type="button" data-action="confirm-import">Confirmar Importação</button>
+      <button class="btn btn-secondary" type="button" data-action="cancel-import">Cancelar</button>
     </div>
   </div>`;
 }
@@ -1357,12 +2010,12 @@ function dlTemplate(){
 function vReports(){
   return `
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-title">🔻 Funil de Pipeline</div><canvas id="ch-funnel" height="240"></canvas></div>
-    <div class="chart-card"><div class="chart-title">⭐ Qualidade dos Leads</div><canvas id="ch-quality" height="240"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Funil de Pipeline</div><canvas id="ch-funnel" height="240"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Qualidade dos Leads</div><canvas id="ch-quality" height="240"></canvas></div>
   </div>
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-title">📈 Leads Adicionados por Mês</div><canvas id="ch-monthly" height="240"></canvas></div>
-    <div class="chart-card"><div class="chart-title">💰 Funil de Conversão</div><canvas id="ch-conv" height="240"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Leads Adicionados por Mês</div><canvas id="ch-monthly" height="240"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Funil de Conversão</div><canvas id="ch-conv" height="240"></canvas></div>
   </div>`;
 }
 
@@ -1374,7 +2027,7 @@ function initCharts(){
     const closed=S.leads.filter(l=>l.sold||l.stage==='closed').length;
     const rate=S.leads.length?Math.round(closed/S.leads.length*100):0;
     el.innerHTML += `<div class="card" style="text-align:center;padding:30px;margin-top:16px">
-      <p style="font-size:14px;color:#64748B;margin-bottom:12px">⚠️ Gráficos não disponíveis (verifique conexão com internet).</p>
+      <p style="font-size:14px;color:#64748B;margin-bottom:12px">Gráficos não disponíveis (verifique conexão com internet).</p>
       <p style="font-weight:700">Total: ${S.leads.length} leads · Fechados: ${closed} · Taxa de conversão: ${rate}%</p>
     </div>`;
     return;
@@ -1393,7 +2046,7 @@ function initCharts(){
 
   // Quality
   const q = document.getElementById('ch-quality');
-  if(q) S.charts.q = new Chart(q,{type:'doughnut',data:{labels:['🔥 Hot (A)','😊 Warm (B)','❄️ Cold (C)','🧊 Frozen (D)'],datasets:[{data:qualData,backgroundColor:['#10B981','#3B82F6','#F59E0B','#94A3B8'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom'}},cutout:'62%'}});
+  if(q) S.charts.q = new Chart(q,{type:'doughnut',data:{labels:['Hot (A)','Warm (B)','Cold (C)','Frozen (D)'],datasets:[{data:qualData,backgroundColor:['#10B981','#3B82F6','#F59E0B','#94A3B8'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom'}},cutout:'62%'}});
 
   // Monthly
   const months=[], counts=[];
@@ -1420,7 +2073,7 @@ function openLeadModal(id){
   const l = id ? S.leads.find(x=>x.id===id) : null;
   document.getElementById('modal-title').textContent = l ? 'Editar — ' + l.name : 'Novo Lead';
 
-  const stageOpts = STAGES.map(s=>`<option value="${escAttr(s.id)}">${s.icon} ${escHtml(s.name)}</option>`).join('');
+  const stageOpts = STAGES.map(s=>`<option value="${escAttr(s.id)}">${escHtml(s.name)}</option>`).join('');
 
   document.getElementById('modal-body').innerHTML = `
   <div class="form-section">
@@ -1539,6 +2192,7 @@ function openLeadModal(id){
 
   document.getElementById('modal-footer').innerHTML = `
     <button type="button" class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+    ${l?`<button type="button" class="btn btn-secondary" data-action="open-meeting" data-id="${escAttr(l.id)}" title="Usa os dados já salvos deste lead">Marcar reunião</button>`:''}
     ${l?`<button type="button" class="btn btn-danger btn-sm" data-action="delete-lead" data-id="${escAttr(l.id)}">Excluir Lead</button>`:''}
     <button type="button" class="btn btn-primary" data-action="save-lead">Salvar</button>`;
 
@@ -1653,7 +2307,7 @@ function saveTask(){
 
 function vUsers() {
   if (!isAdmin()) {
-    return `<div class="empty-state"><div class="empty-state-icon">🛡️</div><h3>Acesso restrito</h3><p>Somente administradores podem gerenciar contas.</p></div>`;
+    return `<div class="empty-state"><h3>Acesso restrito</h3><p>Somente administradores podem gerenciar contas.</p></div>`;
   }
   const rows = teamUsers.length ? teamUsers.map(u => {
     const when = u.created_at ? new Date(u.created_at).toLocaleString('pt-BR') : '—';
@@ -1750,55 +2404,53 @@ function vBackup() {
   return `
   <div class="split-2" style="margin-bottom:20px">
     <div class="card">
-      <div style="font-weight:700;font-size:15px;margin-bottom:16px">${cloudOn ? '☁️ Status da nuvem' : '🔒 Status do Auto-save'}</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:16px">${cloudOn ? 'Status da nuvem' : 'Status do Auto-save'}</div>
       <div style="display:flex;align-items:center;gap:12px;padding:14px;background:${cloudOn ? '#E6F6FF' : '#DCFCE7'};border-radius:10px;margin-bottom:14px">
-        <span style="font-size:26px">${cloudOn ? '☁️' : '✅'}</span>
         <div>
           <div style="font-weight:700;color:${cloudOn ? '#006eb3' : '#166534'}">${cloudOn ? 'Sincronizado com o Supabase' : 'Auto-save neste navegador'}</div>
           <div style="font-size:12px;color:${cloudOn ? '#007acc' : '#15803D'}">${cloudOn ? 'Leads e tarefas são salvos na conta ' + escHtml(currentUser.email || '') : 'Cada alteração é salva automaticamente neste navegador'}</div>
         </div>
       </div>
-      <div style="font-size:13px;color:#374151;margin-bottom:6px">📅 Último save: <strong>${lastSaveStr}</strong></div>
-      <div style="font-size:13px;color:#374151;margin-bottom:6px">👥 Leads salvos: <strong>${S.leads.length}</strong></div>
-      <div style="font-size:13px;color:#374151">✅ Tarefas salvas: <strong>${S.tasks.length}</strong></div>
+      <div style="font-size:13px;color:#374151;margin-bottom:6px">Último save: <strong>${lastSaveStr}</strong></div>
+      <div style="font-size:13px;color:#374151;margin-bottom:6px">Leads salvos: <strong>${S.leads.length}</strong></div>
+      <div style="font-size:13px;color:#374151">Tarefas salvas: <strong>${S.tasks.length}</strong></div>
     </div>
     <div class="card">
-      <div style="font-weight:700;font-size:15px;margin-bottom:16px">⬇ Backup Manual</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:16px">Backup Manual</div>
       <p style="font-size:13px;color:#64748B;margin-bottom:14px">Salva todos os dados em um arquivo no seu computador.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" type="button" data-action="backup-now">💾 Baixar backup agora</button>
-      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" type="button" data-action="sync-claude">⬆ Sincronizar com Claude / Firefox</button>
-      <button class="btn btn-secondary btn-sm" style="width:100%" type="button" data-action="restore-open" data-target="restore-bk">📂 Restaurar de um backup</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" type="button" data-action="backup-now">Baixar backup agora</button>
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" type="button" data-action="sync-claude">Sincronizar com Claude / Firefox</button>
+      <button class="btn btn-secondary btn-sm" style="width:100%" type="button" data-action="restore-open" data-target="restore-bk">Restaurar de um backup</button>
       <input type="file" id="restore-bk" accept=".json" style="display:none" >
     </div>
   </div>
 
   <div class="card" style="margin-bottom:20px">
-    <div style="font-weight:700;font-size:15px;margin-bottom:14px">🦊 Sincronização com Firefox</div>
+    <div style="font-weight:700;font-size:15px;margin-bottom:14px">Sincronização com Firefox</div>
     <div class="split-2" style="gap:14px">
       <div style="padding:14px;background:#FFF7ED;border-radius:10px;border-left:3px solid #F97316">
         <div style="font-weight:700;font-size:13px;color:#9A3412;margin-bottom:5px">Cowork → Firefox</div>
         <div style="font-size:12px;color:#C2410C;margin-bottom:10px">Gera um HTML com seus dados embutidos para abrir direto no Firefox.</div>
-        <button class="btn btn-sm" style="background:#F97316;color:#fff;width:100%" type="button" data-action="firefox-html">🦊 Gerar HTML para Firefox</button>
+        <button class="btn btn-sm" style="background:#F97316;color:#fff;width:100%" type="button" data-action="firefox-html">Gerar HTML para Firefox</button>
       </div>
       <div style="padding:14px;background:#E6F6FF;border-radius:10px;border-left:3px solid #009eff">
         <div style="font-weight:700;font-size:13px;color:#006eb3;margin-bottom:5px">Sincronizar com Claude</div>
         <div style="font-size:12px;color:#007acc;margin-bottom:10px">Baixa o JSON e manda para o Claude no chat — ele atualiza tudo.</div>
-        <button class="btn btn-sm" style="background:#009eff;color:#fff;width:100%" type="button" data-action="sync-claude">⬆ Sincronizar</button>
+        <button class="btn btn-sm" style="background:#009eff;color:#fff;width:100%" type="button" data-action="sync-claude">Sincronizar</button>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div style="font-weight:700;font-size:15px;margin-bottom:4px">📋 Histórico de Backups Manuais</div>
+    <div style="font-weight:700;font-size:15px;margin-bottom:4px">Histórico de Backups Manuais</div>
     <div style="font-size:12px;color:#64748B;margin-bottom:14px">Registros de quando você baixou um backup nesta sessão</div>
     ${history.length ? history.slice().reverse().map(h=>`
       <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #F1F5F9">
-        <span style="font-size:18px">💾</span>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600">${h.leads} leads · ${h.tasks} tarefas</div>
           <div style="font-size:11.5px;color:#94A3B8">${h.date}</div>
         </div>
-        <span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:20px;font-weight:700">✓ Salvo</span>
+        <span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:20px;font-weight:700">Salvo</span>
       </div>`).join('')
     : '<div class="text-muted" style="text-align:center;padding:16px 0">Nenhum backup manual ainda nesta sessão</div>'}
   </div>`;
@@ -1825,7 +2477,7 @@ function backupAgora() {
 function enviarParaClaude() {
   const data = {leads:S.leads, tasks:S.tasks, savedAt:new Date().toISOString(), version:'scrm_v3'};
   dlFile(JSON.stringify(data,null,2), 'crm_data.json', 'application/json');
-  toast('📎 Arquivo baixado! Arraste o crm_data.json para o chat do Claude e diga "sincronizar". O Firefox vai atualizar automaticamente.', 'success');
+  toast('Arquivo baixado! Arraste o crm_data.json para o chat do Claude e diga "sincronizar". O Firefox vai atualizar automaticamente.', 'success');
 }
 
 function gerarParaFirefox() {
@@ -1849,7 +2501,7 @@ function gerarParaFirefox() {
   const nome = 'crm_firefox_' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.html';
   dlFile(html, nome, 'text/html;charset=utf-8');
 
-  toast('🦊 Arquivo gerado! Baixe e abra no Firefox — seus dados já estão dentro.', 'success');
+  toast('Arquivo gerado! Baixe e abra no Firefox — seus dados já estão dentro.', 'success');
 }
 
 // Tenta carregar crm_data.json da mesma pasta (funciona no Firefox com file://)
@@ -1884,7 +2536,7 @@ function backupJSON() {
   const data = {leads:S.leads, tasks:S.tasks, backupDate: new Date().toISOString(), version:'scrm_v3'};
   const filename = `crm_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.json`;
   dlFile(JSON.stringify(data, null, 2), filename, 'application/json');
-  toast('Backup salvo! Abra o Firefox, carregue o CRM e clique em 📂 Restaurar para importar.', 'success');
+  toast('Backup salvo! Abra o Firefox, carregue o CRM e clique em Restaurar para importar.', 'success');
 }
 
 function restoreJSON(e) {
@@ -1901,7 +2553,7 @@ function restoreJSON(e) {
       save();
       flushCloudSave().catch(() => {});
       render();
-      toast(`✅ ${S.leads.length} leads restaurados com sucesso!`, 'success');
+      toast(`${S.leads.length} leads restaurados com sucesso!`, 'success');
     } catch(err) { toast('Erro ao ler o arquivo de backup','error'); }
   };
   r.readAsText(file,'UTF-8');
@@ -1939,6 +2591,18 @@ function onUiClick(e) {
     case 'toggle-menu': toggleMenu(); break;
     case 'close-menu': closeMenu(); break;
     case 'open-lead': openLeadModal(id || null); break;
+    case 'open-meeting': openMeetingModal(id || ''); break;
+    case 'save-meeting': submitMeeting(); break;
+    case 'open-content': openContentModal(id, el.getAttribute('data-date') || ''); break;
+    case 'save-content': saveContent(); break;
+    case 'delete-content': deleteContent(id); break;
+    case 'cal-shift': shiftMonth(Number(el.getAttribute('data-dir')) || 0); break;
+    case 'cal-today': calMonth = new Date(); refreshCalendar(); break;
+    case 'cal-filter': calFilter = el.getAttribute('data-format') || 'all'; paintCalendar(); break;
+    case 'cal-sync': refreshCalendar(); break;
+    case 'open-gcal': openGcalLink(el.getAttribute('data-url') || ''); break;
+    case 'google-connect': onGoogleConnect(); break;
+    case 'google-disconnect': disconnectGoogle(); break;
     case 'delete-lead': delLead(id); break;
     case 'save-lead': saveLead(); break;
     case 'close-modal': closeModal(); break;
